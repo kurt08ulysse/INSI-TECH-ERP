@@ -1124,16 +1124,11 @@ def main():
         # Refresh button removed to avoid accidental page reloads
     
     # Contenu principal
-    # Console visible partout en bas (ou sur page dédiée ?)
-    # Pour l'instant, on l'affiche sur l'onglet Dashboard en bas pour l'effet "Wow" immédiat
-    # Ou mieux : sur une page dédiée "Console IA" ou en bas de tout.
-
-    if page not in ["🏛️ Guichet Mairie", "💳 Paiement en Ligne"]:
-        # Afficher "Dernière MAJ" uniquement sur le Dashboard
-        show_metrics(show_last_update=(page == "📊 Dashboard"))
-        st.markdown("---")
 
     if page == "📊 Dashboard":
+        # Afficher les métriques UNIQUEMENT sur le Dashboard
+        show_metrics(show_last_update=True)
+        st.markdown("---")
         show_revenue_distribution()
         st.markdown("---")
 
