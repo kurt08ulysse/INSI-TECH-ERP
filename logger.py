@@ -31,8 +31,8 @@ def get_logger(name):
         f_handler.setLevel(logging.DEBUG)
         f_format = logging.Formatter('%(asctime)s | %(levelname)-8s | %(name)s | %(message)s')
         f_handler.setFormatter(f_format)
-        logger.addHandler(f_handler)
-
+        logger.addHandler(f_handler)# 
+#
     return logger
 
 

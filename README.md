@@ -1,9 +1,8 @@
-# 📦 Suivi Intelligent des Stocks avec RFID, MQTT & Hedera Hashgraph
+# 🏛️ Système de Gestion Municipale - INSI-TECH ERP
 
-[![Python](https://img.shields.io/badge/Python-3.8+-blue.svg)](https://www.python.org/)
-[![Hedera](https://img.shields.io/badge/Hedera-Hashgraph-purple.svg)](https://hedera.com/)
-[![MQTT](https://img.shields.io/badge/MQTT-HiveMQ-orange.svg)](https://www.hivemq.com/)
-[![Streamlit](https://img.shields.io/badge/Streamlit-Dashboard-red.svg)](https://streamlit.io/)
+[![Streamlit App](https://static.streamlit.io/badges/streamlit_badge_black_white.svg)](https://your-app.streamlit.app)
+[![Python 3.8+](https://img.shields.io/badge/python-3.8+-blue.svg)](https://www.python.org/downloads/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
 ## 🎯 Objectif général
 
