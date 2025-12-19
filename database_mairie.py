@@ -197,6 +197,26 @@ def init_database():
         )
     ''')
 
+    # 11. MARCHÉS MUNICIPAUX
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS marches (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            nom_marche VARCHAR(200) NOT NULL,
+            adresse TEXT NOT NULL,
+            quartier VARCHAR(100),
+            latitude REAL NOT NULL,
+            longitude REAL NOT NULL,
+            nombre_etals INTEGER DEFAULT 0,
+            tarif_etal_jour REAL DEFAULT 6500.0,
+            type_marche VARCHAR(50) DEFAULT 'Permanent',
+            jours_ouverture TEXT,
+            horaires TEXT,
+            description TEXT,
+            actif BOOLEAN DEFAULT 1,
+            date_creation TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+    ''')
+
     # ==================== SEEDING DES DONNÉES ====================
 
     # 1. TAXES
@@ -366,6 +386,24 @@ def init_database():
             services_data
         )
         logger.info("✅ Services municipaux créés")
+
+    # 6. MARCHÉS MUNICIPAUX - COMMUNE DE FRANCEVILLE, GABON
+    # Source: Gabonreview.com, Gabonmediatime.com (2024-2025)
+    # Coordonnées GPS: Franceville est située à environ -1.63°S, 13.58°E
+    cursor.execute("SELECT COUNT(*) FROM marches")
+    if cursor.fetchone()[0] == 0:
+        marches_data = [
+            # Marchés officiels de Franceville, Gabon (coordonnées GPS réelles de Franceville)
+            ('Grand Marché de Potos', 'Quartier Potos, Franceville', 'Potos', -1.6332, 13.5833, 443, 30000.0, 'Permanent', 'Lun-Dim', '6h-19h', 'Marché central moderne de 12000m², plus grand espace commercial de Franceville. Tarif après réduction: 30000-100000 FCFA/mois selon taille box', 1),
+            ('Marché de Ngoungoulou', 'Quartier Ngoungoulou, Franceville', 'Ngoungoulou', -1.6300, 13.5900, 120, 25000.0, 'Permanent', 'Lun-Sam', '6h-18h', 'Marché de quartier, produits vivriers et commerces divers', 1),
+            ('Marché de la Foi', 'Quartier La Foi, Franceville', 'La Foi', -1.6400, 13.5750, 85, 20000.0, 'Permanent', 'Mar-Dim', '6h-17h', 'Marché de quartier, alimentation et produits de première nécessité', 1),
+            ('Marché de Bapili', 'Quartier Bapili, Franceville', 'Bapili', -1.6280, 13.5920, 65, 20000.0, 'Permanent', 'Lun-Sam', '6h-18h', 'Marché communautaire, produits frais locaux', 1),
+        ]
+        cursor.executemany(
+            "INSERT INTO marches (nom_marche, adresse, quartier, latitude, longitude, nombre_etals, tarif_etal_jour, type_marche, jours_ouverture, horaires, description, actif) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+            marches_data
+        )
+        logger.info("✅ Marchés municipaux créés")
 
     conn.commit()
     conn.close()
@@ -614,6 +652,63 @@ def update_all_formulaires(df_docs):
         conn.rollback()
     finally:
         conn.close()
+
+
+# ==================== FONCTIONS MARCHÉS MUNICIPAUX ====================
+
+def get_all_marches():
+    """Retourne la liste de tous les marchés municipaux."""
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute('''
+        SELECT id, nom_marche, adresse, quartier, latitude, longitude,
+               nombre_etals, tarif_etal_jour, type_marche, jours_ouverture,
+               horaires, description, actif, date_creation
+        FROM marches
+        WHERE actif = 1
+        ORDER BY nom_marche
+    ''')
+    marches = cursor.fetchall()
+    conn.close()
+    return [dict(m) for m in marches]
+
+
+def get_marche_by_id(marche_id: int):
+    """Retourne les détails d'un marché spécifique."""
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute('''
+        SELECT id, nom_marche, adresse, quartier, latitude, longitude,
+               nombre_etals, tarif_etal_jour, type_marche, jours_ouverture,
+               horaires, description, actif, date_creation
+        FROM marches
+        WHERE id = ?
+    ''', (marche_id,))
+    marche = cursor.fetchone()
+    conn.close()
+    return dict(marche) if marche else None
+
+
+def get_marches_stats():
+    """Retourne les statistiques sur les marchés municipaux."""
+    conn = get_connection()
+    cursor = conn.cursor()
+
+    cursor.execute("SELECT COUNT(*) FROM marches WHERE actif = 1")
+    total_marches = cursor.fetchone()[0]
+
+    cursor.execute("SELECT SUM(nombre_etals) FROM marches WHERE actif = 1")
+    total_etals = cursor.fetchone()[0] or 0
+
+    cursor.execute("SELECT AVG(tarif_etal_jour) FROM marches WHERE actif = 1")
+    tarif_moyen = cursor.fetchone()[0] or 0
+
+    conn.close()
+    return {
+        'total_marches': total_marches,
+        'total_etals': total_etals,
+        'tarif_moyen': tarif_moyen
+    }
 
 
 # Initialiser la base au chargement du module

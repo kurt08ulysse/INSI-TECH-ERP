@@ -720,6 +720,155 @@ def show_predictions():
     st.plotly_chart(fig_fin, use_container_width=True)
 
 
+def show_marches_map():
+    """Affiche la cartographie des marchés municipaux de Franceville."""
+    st.subheader("🗺️ Cartographie des Marchés Municipaux - Franceville")
+
+    # Récupérer les données des marchés
+    marches = db.get_all_marches()
+
+    if not marches:
+        st.info("Aucun marché enregistré pour le moment.")
+        return
+
+    # Convertir en DataFrame
+    df_marches = pd.DataFrame(marches)
+
+    # Statistiques globales
+    stats = db.get_marches_stats()
+
+    col1, col2, col3 = st.columns(3)
+
+    with col1:
+        st.metric("🏪 Nombre de Marchés", stats['total_marches'])
+
+    with col2:
+        st.metric("🛒 Total Étals/Box", f"{stats['total_etals']:,.0f}")
+
+    with col3:
+        st.metric("💰 Tarif Moyen", f"{stats['tarif_moyen']:,.0f} FCFA")
+
+    st.markdown("---")
+
+    # Créer la carte avec Plotly - Centrée sur Franceville, Gabon
+    # Franceville: -1.6332°S, 13.5833°E
+
+    # Préparer les informations de hover personnalisées
+    hover_texts = []
+    for _, row in df_marches.iterrows():
+        hover_text = f"<b>{row['nom_marche']}</b><br>"
+        hover_text += f"📍 Quartier: {row['quartier']}<br>"
+        hover_text += f"🛒 Étals: {row['nombre_etals']}<br>"
+        hover_text += f"💰 Tarif: {row['tarif_etal_jour']:,.0f} FCFA<br>"
+        hover_text += f"📅 {row['jours_ouverture']}<br>"
+        hover_text += f"🕐 {row['horaires']}"
+        hover_texts.append(hover_text)
+
+    # Créer la figure avec des marqueurs bien visibles
+    fig = go.Figure()
+
+    # Ajouter les marqueurs des marchés avec une taille fixe et visible
+    fig.add_trace(go.Scattermapbox(
+        lat=df_marches['latitude'],
+        lon=df_marches['longitude'],
+        mode='markers+text',
+        marker=dict(
+            size=20,  # Taille fixe et visible
+            color='red',  # Couleur rouge vif pour visibilité
+            opacity=0.9,
+            symbol='circle'
+        ),
+        text=df_marches['nom_marche'],
+        textposition="top center",
+        textfont=dict(size=10, color='darkblue', family='Arial Black'),
+        hovertext=hover_texts,
+        hoverinfo='text',
+        name='Marchés'
+    ))
+
+    # Configuration de la carte (OpenStreetMap)
+    fig.update_layout(
+        mapbox=dict(
+            style="open-street-map",
+            center=dict(lat=-1.6332, lon=13.5833),  # Centre sur Franceville, Gabon
+            zoom=13
+        ),
+        title="Localisation des Marchés de Franceville, Gabon",
+        title_font_size=18,
+        title_x=0.5,
+        height=600,
+        margin={"r": 0, "t": 50, "l": 0, "b": 0},
+        showlegend=True,
+        # Activer les interactions (zoom, pan, etc.)
+        dragmode='zoom',
+        hovermode='closest'
+    )
+
+    # Activer tous les boutons de contrôle
+    config = {
+        'scrollZoom': True,  # Zoom avec la molette
+        'displayModeBar': True,  # Afficher la barre d'outils
+        'displaylogo': False,  # Masquer le logo Plotly
+        'modeBarButtonsToAdd': ['zoom2d', 'pan2d', 'zoomIn2d', 'zoomOut2d', 'resetScale2d']
+    }
+
+    st.plotly_chart(fig, use_container_width=True, config=config)
+
+    # Détails des marchés sous forme de tableau
+    st.markdown("### 📋 Liste détaillée des marchés")
+
+    # Préparer le tableau
+    df_display = df_marches[[
+        'nom_marche', 'quartier', 'nombre_etals', 'tarif_etal_jour',
+        'type_marche', 'jours_ouverture', 'horaires'
+    ]].copy()
+
+    df_display.columns = [
+        'Nom du Marché', 'Quartier', 'Nb Étals', 'Tarif (FCFA)',
+        'Type', 'Jours Ouverture', 'Horaires'
+    ]
+
+    st.dataframe(
+        df_display,
+        use_container_width=True,
+        hide_index=True,
+        column_config={
+            "Tarif (FCFA)": st.column_config.NumberColumn(
+                format="%d FCFA"
+            )
+        }
+    )
+
+    # Section informations détaillées par marché
+    st.markdown("### 📍 Informations détaillées")
+
+    selected_marche = st.selectbox(
+        "Sélectionnez un marché pour plus de détails:",
+        df_marches['nom_marche'].tolist()
+    )
+
+    if selected_marche:
+        marche_info = df_marches[df_marches['nom_marche'] == selected_marche].iloc[0]
+
+        col1, col2 = st.columns(2)
+
+        with col1:
+            st.markdown(f"**🏪 {marche_info['nom_marche']}**")
+            st.markdown(f"📍 **Adresse:** {marche_info['adresse']}")
+            st.markdown(f"🏘️ **Quartier:** {marche_info['quartier']}")
+            st.markdown(f"📅 **Jours:** {marche_info['jours_ouverture']}")
+            st.markdown(f"🕐 **Horaires:** {marche_info['horaires']}")
+
+        with col2:
+            st.markdown(f"🛒 **Nombre d'étals/box:** {marche_info['nombre_etals']}")
+            st.markdown(f"💰 **Tarif:** {marche_info['tarif_etal_jour']:,.0f} FCFA")
+            st.markdown(f"🏷️ **Type:** {marche_info['type_marche']}")
+            st.markdown(f"📌 **Coordonnées GPS:** {marche_info['latitude']}, {marche_info['longitude']}")
+
+        if marche_info['description']:
+            st.info(f"ℹ️ **Description:** {marche_info['description']}")
+
+
 def main():
     """Point d'entrée principal."""
     # Auto-refresh toutes les 2 secondes pour effet "Live"
@@ -738,7 +887,7 @@ def main():
         
         page = st.radio(
             "Navigation",
-            ["📊 Dashboard", "💳 Paiement en Ligne", "🏛️ Guichet Mairie", "Historique Recettes", "Historique Transactions", "🚨 Alertes"]
+            ["📊 Dashboard", "🗺️ Cartographie Marchés", "💳 Paiement en Ligne", "🏛️ Guichet Mairie", "Historique Recettes", "Historique Transactions", "🚨 Alertes"]
         )
         
         st.markdown("---")
@@ -760,6 +909,9 @@ def main():
     if page == "📊 Dashboard":
         show_revenue_distribution()
         st.markdown("---")
+
+    elif page == "🗺️ Cartographie Marchés":
+        show_marches_map()
 
     elif page == "💳 Paiement en Ligne":
         paiement_client.show_paiement_client_page()
