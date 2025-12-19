@@ -24,9 +24,24 @@ st.markdown("""
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 """, unsafe_allow_html=True)
 
-# Style CSS personnalisé avec support mobile
+# Style CSS personnalisé avec support mobile et optimisations de performance
 st.markdown("""
 <style>
+    /* Optimisations globales de performance */
+    * {
+        -webkit-font-smoothing: antialiased;
+        -moz-osx-font-smoothing: grayscale;
+    }
+
+    html {
+        scroll-behavior: smooth;
+        -webkit-overflow-scrolling: touch;
+    }
+
+    body {
+        overflow-x: hidden;
+    }
+
     .main-header {
         font-size: 2.5rem;
         font-weight: bold;
@@ -61,10 +76,25 @@ st.markdown("""
     }
     .stButton>button {
         width: 100%;
+        transition: all 0.2s ease;
+        -webkit-tap-highlight-color: rgba(0,0,0,0.1);
     }
 
     /* OPTIMISATIONS MOBILE */
     @media only screen and (max-width: 768px) {
+        /* Performance: désactiver les animations complexes sur mobile */
+        *, *::before, *::after {
+            animation-duration: 0.01ms !important;
+            animation-iteration-count: 1 !important;
+            transition-duration: 0.01ms !important;
+        }
+
+        /* Touch optimization */
+        button, a, input, select {
+            touch-action: manipulation;
+            -webkit-tap-highlight-color: rgba(0,0,0,0.1);
+        }
+
         /* Header plus petit sur mobile */
         .main-header {
             font-size: 1.5rem !important;
@@ -87,9 +117,10 @@ st.markdown("""
 
         /* Réduire padding sur mobile */
         .block-container {
-            padding-left: 1rem !important;
-            padding-right: 1rem !important;
-            padding-top: 1rem !important;
+            padding-left: 0.5rem !important;
+            padding-right: 0.5rem !important;
+            padding-top: 0.5rem !important;
+            max-width: 100% !important;
         }
 
         /* Sidebar plus compacte */
@@ -101,29 +132,35 @@ st.markdown("""
         .stButton>button {
             padding: 0.75rem 1rem !important;
             font-size: 0.9rem !important;
-            min-height: 44px !important;
+            min-height: 48px !important;
+            touch-action: manipulation;
         }
 
-        /* Tables responsive */
+        /* Tables responsive avec scroll horizontal fluide */
         [data-testid="stDataFrame"] {
             font-size: 0.75rem !important;
+            overflow-x: auto !important;
+            -webkit-overflow-scrolling: touch !important;
         }
 
         /* Graphiques Plotly responsive */
         .js-plotly-plot {
             width: 100% !important;
+            touch-action: pan-x pan-y !important;
         }
 
         /* Colonnes stackées sur mobile */
         [data-testid="column"] {
             min-width: 100% !important;
             margin-bottom: 0.5rem;
+            flex: 1 1 100% !important;
         }
 
         /* Tabs plus compacts */
         [data-testid="stTabs"] button {
             font-size: 0.8rem !important;
             padding: 0.5rem !important;
+            min-height: 44px !important;
         }
 
         /* Alertes plus compactes */
@@ -155,15 +192,30 @@ st.markdown("""
             padding: 1rem 0 !important;
         }
 
-        /* Radio buttons plus espacés */
+        /* Radio buttons plus espacés et touchables */
         [data-testid="stRadio"] label {
-            padding: 0.5rem 0 !important;
+            padding: 0.75rem 0 !important;
             font-size: 0.9rem !important;
+            min-height: 44px !important;
+            display: flex !important;
+            align-items: center !important;
         }
 
         /* Data editor responsive */
         [data-testid="stDataFrameResizable"] {
             overflow-x: auto !important;
+            -webkit-overflow-scrolling: touch !important;
+        }
+
+        /* Optimiser les inputs */
+        input, select, textarea {
+            font-size: 16px !important; /* Évite le zoom automatique sur iOS */
+            min-height: 44px !important;
+        }
+
+        /* Carte optimisée */
+        .mapboxgl-canvas {
+            touch-action: pan-x pan-y !important;
         }
     }
 
@@ -171,6 +223,7 @@ st.markdown("""
     @media only screen and (max-width: 480px) {
         .main-header {
             font-size: 1.2rem !important;
+            padding: 0.5rem !important;
         }
 
         [data-testid="stMetricValue"] {
@@ -179,6 +232,12 @@ st.markdown("""
 
         .stButton>button {
             font-size: 0.85rem !important;
+            padding: 0.5rem !important;
+        }
+
+        /* Encore plus compact */
+        .block-container {
+            padding: 0.25rem !important;
         }
     }
 </style>
@@ -871,8 +930,8 @@ def show_marches_map():
 
 def main():
     """Point d'entrée principal."""
-    # Auto-refresh toutes les 2 secondes pour effet "Live"
-    count = st_autorefresh(interval=2000, limit=None, key="fizzbuzzcounter")
+    # Auto-refresh toutes les 5 secondes pour meilleure performance mobile
+    count = st_autorefresh(interval=5000, limit=None, key="fizzbuzzcounter")
 
     init_db()
     
@@ -887,7 +946,7 @@ def main():
         
         page = st.radio(
             "Navigation",
-            ["📊 Dashboard", "🗺️ Cartographie Marchés", "💳 Paiement en Ligne", "🏛️ Guichet Mairie", "Historique Recettes", "Historique Transactions", "🚨 Alertes"]
+            ["📊 Dashboard", "🗺️ Cartographie Marchés", "💳 Paiement en Ligne", "🏛️ Guichet Mairie", "💰 Historique Recettes", "📜 Historique Transactions", "🚨 Alertes"]
         )
         
         st.markdown("---")
@@ -917,9 +976,9 @@ def main():
         paiement_client.show_paiement_client_page()
     elif page == "🏛️ Guichet Mairie":
         guichet.show_guichet_page()
-    elif page == "Historique Recettes":
+    elif page == "💰 Historique Recettes":
         show_revenue_history()
-    elif page == "Historique Transactions":
+    elif page == "📜 Historique Transactions":
         show_transactions()
     elif page == "🚨 Alertes":
         show_alerts()
