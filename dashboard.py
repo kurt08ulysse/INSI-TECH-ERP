@@ -499,17 +499,14 @@ def show_revenue_history():
     recettes = [t for t in transactions if "TAXE" in t['type'] or "ACTE" in t['type']]
     
     # Statistiques des Recettes
-    col1, col2, col3 = st.columns(3)
-    
+    col1, col2 = st.columns(2)
+
     with col1:
         total_recettes = sum(t['montant'] for t in recettes)
         st.metric("💵 Total Recettes", f"{total_recettes:,.0f} FCFA")
-    
+
     with col2:
         nb_transactions = len(recettes)
-        st.metric("🧾 Nombre d'Encaissements", nb_transactions)
-    
-    with col3:
         avg_panier = total_recettes / nb_transactions if nb_transactions > 0 else 0
         st.metric("📊 Panier Moyen", f"{avg_panier:,.0f} FCFA")
     
@@ -626,19 +623,16 @@ def show_transactions():
 
     # === KPI STATISTIQUES ===
     st.markdown("### 📊 Statistiques")
-    kpi1, kpi2, kpi3, kpi4 = st.columns(4)
+    kpi1, kpi2, kpi3 = st.columns(3)
 
     with kpi1:
         st.metric("💵 Total", f"{df_filtre['montant'].sum():,.0f} FCFA")
 
     with kpi2:
-        st.metric("📝 Transactions", len(df_filtre))
-
-    with kpi3:
         avg = df_filtre['montant'].mean() if len(df_filtre) > 0 else 0
         st.metric("📊 Moyenne", f"{avg:,.0f} FCFA")
 
-    with kpi4:
+    with kpi3:
         max_tx = df_filtre['montant'].max() if len(df_filtre) > 0 else 0
         st.metric("🔝 Maximum", f"{max_tx:,.0f} FCFA")
 
