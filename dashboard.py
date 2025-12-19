@@ -10,6 +10,7 @@ import database_mairie as db
 import services_mairie as services
 import guichet_mairie as guichet
 import paiement_client
+import ia_surveillance
 
 # Configuration de la page avec support mobile
 st.set_page_config(
@@ -268,6 +269,58 @@ st.markdown("""
 def init_db():
     """Initialise la base de données si nécessaire."""
     db.init_database()
+
+
+def activer_surveillance_ia():
+    """Active la surveillance IA et génère des alertes de test si nécessaire."""
+    try:
+        # Vérifier s'il y a déjà des alertes
+        alertes_existantes = db.get_pending_alertes()
+
+        # Si aucune alerte, créer des alertes de démonstration
+        if not alertes_existantes:
+            # Alerte 1: Stock critique
+            db.create_alerte(
+                titre="Stock formulaires CNI faible",
+                description="Il ne reste que 12 formulaires de CNI en stock",
+                type_alerte="STOCK_CRITIQUE",
+                montant=12,
+                niveau="URGENT"
+            )
+
+            # Alerte 2: Gros paiement
+            db.create_alerte(
+                titre="Transaction importante détectée",
+                description="Paiement de 450,000 FCFA reçu pour taxe foncière",
+                type_alerte="GROS_PAIEMENT",
+                montant=450000,
+                niveau="INFO"
+            )
+
+            # Alerte 3: Anomalie de taxe
+            db.create_alerte(
+                titre="Montant suspect - Taxe habitation",
+                description="Taxe de 500 FCFA enregistrée (attendu: environ 50,000 FCFA)",
+                type_alerte="ANOMALIE_TAXE",
+                montant=500,
+                niveau="URGENT"
+            )
+
+            # Alerte 4: Recette faible
+            db.create_alerte(
+                titre="Baisse anormale des recettes",
+                description="Recettes du jour: 35,000 FCFA (moyenne: 180,000 FCFA) - Baisse de 81%",
+                type_alerte="RECETTE_FAIBLE",
+                montant=35000,
+                niveau="ATTENTION"
+            )
+
+        # Lancer la surveillance quotidienne (en mode silencieux pour ne pas ralentir l'app)
+        # ia_surveillance.lancer_surveillance_quotidienne()
+
+    except Exception as e:
+        # Ne pas bloquer l'app si la surveillance échoue
+        pass
 
 
 def show_metrics():
@@ -954,7 +1007,8 @@ def main():
     count = st_autorefresh(interval=5000, limit=None, key="fizzbuzzcounter")
 
     init_db()
-    
+    activer_surveillance_ia()  # Activer la surveillance et créer alertes de démo
+
     # Header
     st.markdown('<div class="main-header">🏛️ SYSTÈME DE GESTION MUNICIPALE</div>',
                 unsafe_allow_html=True)
