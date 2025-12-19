@@ -217,6 +217,16 @@ st.markdown("""
         .mapboxgl-canvas {
             touch-action: pan-x pan-y !important;
         }
+
+        /* Optimisation graphiques Plotly sur mobile */
+        .plotly {
+            width: 100% !important;
+        }
+
+        /* Réduire hauteur des graphiques sur mobile */
+        .js-plotly-plot .plotly {
+            max-height: 400px !important;
+        }
     }
 
     /* Pour très petits écrans (téléphones en portrait) */
@@ -238,6 +248,17 @@ st.markdown("""
         /* Encore plus compact */
         .block-container {
             padding: 0.25rem !important;
+        }
+
+        /* Carte plus petite sur très petits écrans */
+        .js-plotly-plot .plotly {
+            max-height: 350px !important;
+        }
+
+        /* Titres h2 plus petits */
+        h2 {
+            font-size: 1rem !important;
+            line-height: 1.3 !important;
         }
     }
 </style>
@@ -781,7 +802,12 @@ def show_predictions():
 
 def show_marches_map():
     """Affiche la cartographie des marchés municipaux de Franceville."""
-    st.subheader("🗺️ Cartographie des Marchés Municipaux - Franceville")
+    # Titre responsive
+    st.markdown("""
+    <h2 style='text-align: center; color: #1E88E5; font-size: clamp(1rem, 4vw, 1.5rem); margin-bottom: 1rem;'>
+    🗺️ Cartographie des Marchés - Franceville, Gabon
+    </h2>
+    """, unsafe_allow_html=True)
 
     # Récupérer les données des marchés
     marches = db.get_all_marches()
@@ -849,16 +875,8 @@ def show_marches_map():
             center=dict(lat=-1.6332, lon=13.5833),  # Centre sur Franceville, Gabon
             zoom=13
         ),
-        title={
-            'text': "🗺️ Localisation des Marchés de Franceville, Gabon",
-            'y': 0.98,
-            'x': 0.5,
-            'xanchor': 'center',
-            'yanchor': 'top',
-            'font': {'size': 18, 'color': '#1E88E5'}
-        },
-        height=650,
-        margin={"r": 10, "t": 60, "l": 10, "b": 10},
+        height=500,  # Hauteur réduite pour meilleure compatibilité mobile
+        margin={"r": 0, "t": 10, "l": 0, "b": 0},  # Marges réduites
         showlegend=False,  # Masquer la légende pour plus d'espace
         # Activer les interactions (zoom, pan, etc.)
         dragmode='zoom',
