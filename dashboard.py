@@ -830,19 +830,16 @@ def show_marches_map():
     fig.add_trace(go.Scattermapbox(
         lat=df_marches['latitude'],
         lon=df_marches['longitude'],
-        mode='markers+text',
+        mode='markers',  # Seulement les marqueurs, pas de texte pour éviter superposition
         marker=dict(
-            size=20,  # Taille fixe et visible
-            color='red',  # Couleur rouge vif pour visibilité
-            opacity=0.9,
+            size=25,  # Taille augmentée pour meilleure visibilité
+            color='#FF4444',  # Rouge vif
+            opacity=0.95,
             symbol='circle'
         ),
-        text=df_marches['nom_marche'],
-        textposition="top center",
-        textfont=dict(size=10, color='darkblue', family='Arial Black'),
         hovertext=hover_texts,
         hoverinfo='text',
-        name='Marchés'
+        name='Marchés de Franceville'
     ))
 
     # Configuration de la carte (OpenStreetMap)
@@ -852,12 +849,17 @@ def show_marches_map():
             center=dict(lat=-1.6332, lon=13.5833),  # Centre sur Franceville, Gabon
             zoom=13
         ),
-        title="Localisation des Marchés de Franceville, Gabon",
-        title_font_size=18,
-        title_x=0.5,
-        height=600,
-        margin={"r": 0, "t": 50, "l": 0, "b": 0},
-        showlegend=True,
+        title={
+            'text': "🗺️ Localisation des Marchés de Franceville, Gabon",
+            'y': 0.98,
+            'x': 0.5,
+            'xanchor': 'center',
+            'yanchor': 'top',
+            'font': {'size': 18, 'color': '#1E88E5'}
+        },
+        height=650,
+        margin={"r": 10, "t": 60, "l": 10, "b": 10},
+        showlegend=False,  # Masquer la légende pour plus d'espace
         # Activer les interactions (zoom, pan, etc.)
         dragmode='zoom',
         hovermode='closest'
