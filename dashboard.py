@@ -274,11 +274,16 @@ def init_db():
 def activer_surveillance_ia():
     """Active la surveillance IA et génère des alertes de test si nécessaire."""
     try:
-        # Vérifier s'il y a déjà des alertes
-        alertes_existantes = db.get_pending_alertes()
+        # Vérifier s'il y a déjà eu des alertes (même traitées)
+        conn = db.get_connection()
+        cursor = conn.cursor()
+        cursor.execute('SELECT COUNT(*) FROM alertes')
+        total_alertes = cursor.fetchone()[0]
+        conn.close()
 
-        # Si aucune alerte, créer des alertes de démonstration
-        if not alertes_existantes:
+        # Si aucune alerte n'a jamais été créée, créer des alertes de démonstration
+        # Cela évite de recréer les alertes après "Tout marquer comme traité"
+        if total_alertes == 0:
             # Alerte 1: Stock critique
             db.create_alerte(
                 titre="Stock formulaires CNI faible",
@@ -729,16 +734,53 @@ def show_transactions():
 def show_alerts():
     """Affiche les alertes."""
     st.subheader("🚨 Alertes")
-    
+
     alertes = db.get_pending_alertes()
-    
+
     if not alertes:
         st.success("✅ Aucune alerte active")
+        st.info("💡 **Astuce:** Les alertes se génèrent automatiquement lorsque:\n"
+                "- Un stock devient critique\n- Un gros paiement est reçu\n- Une anomalie est détectée\n- Les recettes baissent anormalement")
+
+        # Bouton pour créer des alertes de test
+        if st.button("🧪 Créer des alertes de démonstration", type="secondary"):
+            # Créer 4 nouvelles alertes de test
+            db.create_alerte(
+                titre="Stock formulaires CNI faible",
+                description="Il ne reste que 12 formulaires de CNI en stock",
+                type_alerte="STOCK_CRITIQUE",
+                montant=12,
+                niveau="URGENT"
+            )
+            db.create_alerte(
+                titre="Transaction importante détectée",
+                description="Paiement de 450,000 FCFA reçu pour taxe foncière",
+                type_alerte="GROS_PAIEMENT",
+                montant=450000,
+                niveau="INFO"
+            )
+            db.create_alerte(
+                titre="Montant suspect - Taxe habitation",
+                description="Taxe de 500 FCFA enregistrée (attendu: environ 50,000 FCFA)",
+                type_alerte="ANOMALIE_TAXE",
+                montant=500,
+                niveau="URGENT"
+            )
+            db.create_alerte(
+                titre="Baisse anormale des recettes",
+                description="Recettes du jour: 35,000 FCFA (moyenne: 180,000 FCFA) - Baisse de 81%",
+                type_alerte="RECETTE_FAIBLE",
+                montant=35000,
+                niveau="ATTENTION"
+            )
+            st.success("✅ 4 alertes de test créées!")
+            st.rerun()
         return
-    
+
     # Bouton de suppression global
     if st.button("✅ Tout marquer comme traité", type="primary"):
         db.mark_all_alertes_treated()
+        st.success("✅ Toutes les alertes ont été marquées comme traitées")
         st.rerun()
     
     for alerte in alertes:
