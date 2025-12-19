@@ -1,23 +1,30 @@
-# dashboard.py - Interface utilisateur Streamlit
+# dashboard.py - Interface utilisateur Streamlit pour Système Municipal
 
 import streamlit as st
 import pandas as pd
 import plotly.express as px
 import plotly.graph_objects as go
-import random
 from datetime import datetime
 import time
-import database as db
+import database_mairie as db
+import services_mairie as services
+import guichet_mairie as guichet
+import paiement_client
 
-# Configuration de la page
+# Configuration de la page avec support mobile
 st.set_page_config(
-    page_title="📦 Gestion des Stocks IoT",
-    page_icon="📦",
+    page_title="🏛️ Système de Gestion Municipale",
+    page_icon="🏛️",
     layout="wide",
-    initial_sidebar_state="expanded"
+    initial_sidebar_state="auto"  # Auto-collapse sur mobile
 )
 
-# Style CSS personnalisé
+# Meta viewport pour mobile
+st.markdown("""
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+""", unsafe_allow_html=True)
+
+# Style CSS personnalisé avec support mobile
 st.markdown("""
 <style>
     .main-header {
@@ -55,6 +62,125 @@ st.markdown("""
     .stButton>button {
         width: 100%;
     }
+
+    /* OPTIMISATIONS MOBILE */
+    @media only screen and (max-width: 768px) {
+        /* Header plus petit sur mobile */
+        .main-header {
+            font-size: 1.5rem !important;
+            margin-bottom: 1rem !important;
+            line-height: 1.2;
+        }
+
+        /* Metriques adaptées */
+        [data-testid="stMetricValue"] {
+            font-size: 1.2rem !important;
+        }
+
+        [data-testid="stMetricLabel"] {
+            font-size: 0.8rem !important;
+        }
+
+        [data-testid="stMetricDelta"] {
+            font-size: 0.7rem !important;
+        }
+
+        /* Réduire padding sur mobile */
+        .block-container {
+            padding-left: 1rem !important;
+            padding-right: 1rem !important;
+            padding-top: 1rem !important;
+        }
+
+        /* Sidebar plus compacte */
+        [data-testid="stSidebar"] {
+            min-width: 250px !important;
+        }
+
+        /* Boutons plus gros pour toucher */
+        .stButton>button {
+            padding: 0.75rem 1rem !important;
+            font-size: 0.9rem !important;
+            min-height: 44px !important;
+        }
+
+        /* Tables responsive */
+        [data-testid="stDataFrame"] {
+            font-size: 0.75rem !important;
+        }
+
+        /* Graphiques Plotly responsive */
+        .js-plotly-plot {
+            width: 100% !important;
+        }
+
+        /* Colonnes stackées sur mobile */
+        [data-testid="column"] {
+            min-width: 100% !important;
+            margin-bottom: 0.5rem;
+        }
+
+        /* Tabs plus compacts */
+        [data-testid="stTabs"] button {
+            font-size: 0.8rem !important;
+            padding: 0.5rem !important;
+        }
+
+        /* Alertes plus compactes */
+        .alert-critical, .alert-success {
+            padding: 0.75rem !important;
+            font-size: 0.85rem !important;
+        }
+
+        /* Caption plus petite */
+        .stCaption {
+            font-size: 0.7rem !important;
+        }
+
+        /* Markdown plus lisible */
+        .stMarkdown h3 {
+            font-size: 1.1rem !important;
+        }
+
+        .stMarkdown h4 {
+            font-size: 1rem !important;
+        }
+
+        .stMarkdown h5 {
+            font-size: 0.9rem !important;
+        }
+
+        /* Sliders plus faciles à manipuler */
+        [data-testid="stSlider"] {
+            padding: 1rem 0 !important;
+        }
+
+        /* Radio buttons plus espacés */
+        [data-testid="stRadio"] label {
+            padding: 0.5rem 0 !important;
+            font-size: 0.9rem !important;
+        }
+
+        /* Data editor responsive */
+        [data-testid="stDataFrameResizable"] {
+            overflow-x: auto !important;
+        }
+    }
+
+    /* Pour très petits écrans (téléphones en portrait) */
+    @media only screen and (max-width: 480px) {
+        .main-header {
+            font-size: 1.2rem !important;
+        }
+
+        [data-testid="stMetricValue"] {
+            font-size: 1rem !important;
+        }
+
+        .stButton>button {
+            font-size: 0.85rem !important;
+        }
+    }
 </style>
 """, unsafe_allow_html=True)
 
@@ -65,22 +191,34 @@ def init_db():
 
 
 def show_metrics():
-    """Affiche les métriques principales."""
+    """Affiche les métriques principales pour la mairie."""
     stats = db.get_statistics()
-    
-    # Calcul Recettes Mairie
-    conn = db.get_connection()
-    c = conn.cursor()
-    c.execute("SELECT SUM(montant) FROM transactions WHERE type LIKE 'TAXE%' OR type LIKE 'ACTE%'")
-    res = c.fetchone()[0]
-    recettes_mairie = res if res else 0
-    conn.close()
 
-    col1, col3, col4 = st.columns(3)
-    col1.metric("🚨 Anomalies Recettes", f"{stats['incidents_critiques']}", delta="Urgent" if stats['incidents_critiques'] > 0 else "OK", delta_color="inverse")
-    col3.metric("💰 Recettes Mairie", f"{recettes_mairie:,.0f} FCFA", delta="Positif")
-    col4.metric("⚠️ Alertes Actives", f"{stats['alertes_pending']}", delta="À traiter" if stats['alertes_pending'] > 0 else None, delta_color="inverse")
-    
+    col1, col2, col3, col4 = st.columns(4)
+
+    col1.metric(
+        "💰 Recettes du Jour",
+        f"{stats['recettes_jour']:,.0f} FCFA",
+        delta=f"{stats['nb_transactions_jour']} transaction(s)"
+    )
+
+    col2.metric(
+        "📅 Recettes du Mois",
+        f"{stats['recettes_mois']:,.0f} FCFA"
+    )
+
+    col3.metric(
+        "📊 Recettes Annuelles",
+        f"{stats['recettes_annee']:,.0f} FCFA"
+    )
+
+    col4.metric(
+        "🚨 Alertes",
+        f"{stats['alertes_pending']}",
+        delta="Urgent" if stats['incidents_critiques'] > 0 else None,
+        delta_color="inverse"
+    )
+
     st.caption(f"🕐 Dernière MAJ: {datetime.now().strftime('%H:%M:%S')}")
 
 
@@ -119,65 +257,100 @@ def show_revenue_distribution():
     total = df_grouped['montant'].sum()
     df_grouped['percent'] = (df_grouped['montant'] / total) * 100
     
-    # Chart Pie Interactif
+    # Chart Pie Interactif centré
     fig = px.pie(
-        df_grouped, 
-        values='montant', 
-        names='categorie', 
+        df_grouped,
+        values='montant',
+        names='categorie',
         title='Pourcentage des Recettes par Source',
         hole=0.4,
         color_discrete_sequence=px.colors.sequential.RdBu
     )
-    
+
     fig.update_traces(textinfo='percent+label')
-    st.plotly_chart(fig, use_container_width=True)
-    
-    # Affichage tabulaire simple à côté ou en dessous
-    st.dataframe(
-        df_grouped[['categorie', 'montant', 'percent']],
-        column_config={
-            "categorie": "Source",
-            "montant": st.column_config.NumberColumn("Montant Total", format="%.0f FCFA"),
-            "percent": st.column_config.NumberColumn("Part (%)", format="%.1f %%")
-        },
-        use_container_width=True,
-        hide_index=True
+
+    # Centrer le graphique avec layout amélioré
+    fig.update_layout(
+        title={'x': 0.5, 'xanchor': 'center'},  # Centrer le titre
+        showlegend=True,
+        legend=dict(
+            orientation="h",  # Légende horizontale
+            yanchor="bottom",
+            y=-0.2,
+            xanchor="center",
+            x=0.5
+        ),
+        margin=dict(t=80, b=80, l=50, r=50),  # Marges équilibrées
+        height=500
     )
+
+    # Utiliser des colonnes pour centrer le graphique
+    col_left, col_chart, col_right = st.columns([1, 3, 1])
+
+    with col_chart:
+        st.plotly_chart(fig, use_container_width=True)
+
+    # Affichage tabulaire simple centré aussi
+    col_left2, col_table, col_right2 = st.columns([1, 2, 1])
+
+    with col_table:
+        st.dataframe(
+            df_grouped[['categorie', 'montant', 'percent']],
+            column_config={
+                "categorie": "Source",
+                "montant": st.column_config.NumberColumn("Montant Total", format="%.0f FCFA"),
+                "percent": st.column_config.NumberColumn("Part (%)", format="%.1f %%")
+            },
+            use_container_width=True,
+            hide_index=True
+        )
 
 
 from fpdf import FPDF
 import base64
 
 def export_to_pdf(data):
-    """Génère un PDF à partir d'une liste de dictionnaires."""
-    pdf = FPDF()
+    """Génère un PDF à partir d'une liste de dictionnaires avec informations clients."""
+    pdf = FPDF(orientation='L')  # Landscape pour plus de colonnes
     pdf.add_page()
-    pdf.set_font("Arial", size=12)
-    
-    # Titre
-    pdf.set_font("Arial", 'B', 16)
-    pdf.cell(200, 10, txt="Historique des Recettes - ERP Municipal", ln=True, align='C')
-    pdf.ln(10)
-    
-    # Table Header
-    pdf.set_font("Arial", 'B', 12)
-    pdf.cell(50, 10, "Date", 1)
-    pdf.cell(80, 10, "Libelle", 1)
-    pdf.cell(40, 10, "Montant", 1)
-    pdf.ln()
-    
-    # Table Body
     pdf.set_font("Arial", size=10)
+
+    # Titre
+    pdf.set_font("Arial", 'B', 14)
+    pdf.cell(0, 10, txt="Historique des Recettes - ERP Municipal", ln=True, align='C')
+    pdf.ln(5)
+
+    # Table Header
+    pdf.set_font("Arial", 'B', 9)
+    pdf.cell(35, 8, "Date", 1)
+    pdf.cell(50, 8, "Libelle", 1)
+    pdf.cell(30, 8, "Montant", 1)
+    pdf.cell(45, 8, "Nom Client", 1)
+    pdf.cell(35, 8, "N° CNI/Contrib", 1)
+    pdf.cell(55, 8, "Paiement/Tel", 1)
+    pdf.cell(30, 8, "N° Recu", 1)
+    pdf.ln()
+
+    # Table Body
+    pdf.set_font("Arial", size=7)
     for row in data:
-        date = str(row.get('date_creation', ''))[:19]
-        libelle = str(row.get('type', ''))
-        montant = f"{row.get('montant', 0):,.0f} FCFA"
-        
-        pdf.cell(50, 10, date, 1)
-        pdf.cell(80, 10, libelle, 1)
-        pdf.cell(40, 10, montant, 1)
+        date = str(row.get('date_creation', ''))[:16]
+        libelle = str(row.get('type', ''))[:25]
+        montant = f"{row.get('montant', 0):,.0f}"
+        nom_client = str(row.get('nom_commercant', ''))[:20]
+        numero_client = str(row.get('numero_commercant', ''))[:15]
+        mode_paiement = str(row.get('mode_paiement', ''))[:25]
+        numero_recu = str(row.get('numero_recu', ''))[:15]
+
+        pdf.cell(35, 6, date, 1)
+        pdf.cell(50, 6, libelle, 1)
+        pdf.cell(30, 6, montant, 1)
+        pdf.cell(45, 6, nom_client, 1)
+        pdf.cell(35, 6, numero_client, 1)
+        pdf.cell(55, 6, mode_paiement, 1)
+        pdf.cell(30, 6, numero_recu, 1)
         pdf.ln()
-        
+
     return pdf.output(dest='S').encode('latin-1')
 def show_revenue_history():
     """Affiche l'historique des recettes (anciennement contrats)."""
@@ -203,24 +376,42 @@ def show_revenue_history():
         st.metric("📊 Panier Moyen", f"{avg_panier:,.0f} FCFA")
     
     st.subheader("Détails des Encaissements")
-    
+
     if recettes:
         df_recettes = pd.DataFrame(recettes)
         # Trier par date décroissante (si pas déjà fait)
         if 'date_creation' in df_recettes.columns:
             df_recettes = df_recettes.sort_values(by='date_creation', ascending=False)
 
-        st.dataframe(
-            df_recettes[['date_creation', 'type', 'montant', 'transaction_id']],
-            column_config={
-                "date_creation": "Date",
-                "type": "Libellé",
-                "montant": st.column_config.NumberColumn("Montant", format="%.0f FCFA"),
-                "transaction_id": "Référence / Demandeur"
-            },
-            use_container_width=True,
-            hide_index=True
-        )
+            # S'assurer que les colonnes existent
+            if 'nom_commercant' not in df_recettes.columns:
+                df_recettes['nom_commercant'] = ''
+            if 'numero_commercant' not in df_recettes.columns:
+                df_recettes['numero_commercant'] = ''
+            if 'mode_paiement' not in df_recettes.columns:
+                df_recettes['mode_paiement'] = ''
+
+            # Construire une colonne de référence lisible (numéro de reçu seulement)
+            def make_ref(r):
+                nr = r['numero_recu'] if 'numero_recu' in r and r['numero_recu'] else ''
+                return nr
+
+            df_recettes['reference'] = df_recettes.apply(make_ref, axis=1)
+
+            st.dataframe(
+                df_recettes[['date_creation', 'type', 'montant', 'nom_commercant', 'numero_commercant', 'mode_paiement', 'reference']],
+                column_config={
+                    "date_creation": "Date",
+                    "type": "Libellé",
+                    "montant": st.column_config.NumberColumn("Montant", format="%.0f FCFA"),
+                    "nom_commercant": "Nom Client",
+                    "numero_commercant": "N° CNI/Contribuable",
+                    "mode_paiement": "Mode Paiement / Téléphone",
+                    "reference": "N° Reçu"
+                },
+                use_container_width=True,
+                hide_index=True
+            )
         
         # Bouton Export PDF Direct
         pdf_bytes = export_to_pdf(recettes)
@@ -235,56 +426,166 @@ def show_revenue_history():
 def show_transactions():
     """Affiche l'historique des transactions."""
     st.subheader("💰 Historique des Transactions & Recettes")
-    
+
     transactions = db.get_all_transactions()
-    
+
     if not transactions:
         st.info("Aucune transaction enregistrée.")
         return
 
     df = pd.DataFrame(transactions)
-    
-    # Graphique des transactions dans le temps (conservé de l'original)
+
+    # Graphique interactif amélioré des transactions dans le temps
     if 'date_creation' in df.columns:
         df['date'] = pd.to_datetime(df['date_creation'], format='mixed').dt.date
-        daily = df.groupby('date')['montant'].sum().reset_index()
-        
-        fig = px.line(
-            daily, x='date', y='montant',
-            title="Paiements par Jour",
-            markers=True
+
+        # Agréger par jour: somme des montants ET nombre de transactions
+        daily = df.groupby('date').agg({
+            'montant': 'sum',
+            'id': 'count'
+        }).reset_index()
+        daily.columns = ['date', 'montant_total', 'nb_transactions']
+
+        # Créer un graphique combiné (barres + ligne)
+        fig = go.Figure()
+
+        # Barres pour les montants
+        fig.add_trace(go.Bar(
+            x=daily['date'],
+            y=daily['montant_total'],
+            name='Montant Total',
+            marker_color='#4CAF50',
+            hovertemplate='<b>%{x}</b><br>' +
+                         'Montant: %{y:,.0f} FCFA<br>' +
+                         '<extra></extra>'
+        ))
+
+        # Ligne pour le nombre de transactions (axe secondaire)
+        fig.add_trace(go.Scatter(
+            x=daily['date'],
+            y=daily['nb_transactions'],
+            name='Nombre de Transactions',
+            mode='lines+markers',
+            line=dict(color='#FF9800', width=3),
+            marker=dict(size=8, symbol='diamond'),
+            yaxis='y2',
+            hovertemplate='<b>%{x}</b><br>' +
+                         'Transactions: %{y}<br>' +
+                         '<extra></extra>'
+        ))
+
+        # Mise en page améliorée
+        fig.update_layout(
+            title={
+                'text': '📊 Évolution des Recettes & Nombre de Transactions',
+                'x': 0.5,
+                'xanchor': 'center',
+                'font': {'size': 18, 'color': '#1E88E5'}
+            },
+            xaxis_title='Date',
+            yaxis_title='Montant Total (FCFA)',
+            yaxis2=dict(
+                title='Nombre de Transactions',
+                overlaying='y',
+                side='right',
+                showgrid=False
+            ),
+            height=500,
+            hovermode='x unified',
+            plot_bgcolor='rgba(0,0,0,0)',
+            paper_bgcolor='rgba(0,0,0,0)',
+            legend=dict(
+                orientation="h",
+                yanchor="bottom",
+                y=1.02,
+                xanchor="center",
+                x=0.5
+            ),
+            xaxis=dict(
+                showgrid=True,
+                gridwidth=1,
+                gridcolor='rgba(128,128,128,0.2)'
+            ),
+            yaxis=dict(
+                showgrid=True,
+                gridwidth=1,
+                gridcolor='rgba(128,128,128,0.2)'
+            )
         )
-        fig.update_layout(height=300)
-        st.plotly_chart(fig, use_container_width=True)
+
+        # Afficher le graphique avec configuration interactive complète
+        st.plotly_chart(fig, use_container_width=True, config={
+            'displayModeBar': True,
+            'displaylogo': False,
+            'modeBarButtonsToAdd': ['drawline', 'drawopenpath', 'eraseshape'],
+            'toImageButtonOptions': {
+                'format': 'png',
+                'filename': f'transactions_{datetime.now().strftime("%Y%m%d")}',
+                'height': 600,
+                'width': 1200,
+                'scale': 2
+            }
+        })
 
     # Créer des onglets pour séparer l'Affichage Global et Recettes
     tab1, tab2 = st.tabs(["🌎 Tout", "📥 Recettes (Taxes & Actes)"])
     
     with tab1:
-        # Code existant simplifié ou affichage global
+        # S'assurer que les colonnes existent
+        if 'nom_commercant' not in df.columns:
+            df['nom_commercant'] = ''
+        if 'numero_commercant' not in df.columns:
+            df['numero_commercant'] = ''
+        if 'mode_paiement' not in df.columns:
+            df['mode_paiement'] = ''
+        if 'numero_recu' not in df.columns:
+            df['numero_recu'] = ''
+
         st.dataframe(
-            df[['date_creation', 'type', 'montant', 'transaction_id', 'statut']],
+            df[['date_creation', 'type', 'montant', 'nom_commercant', 'numero_commercant', 'mode_paiement', 'numero_recu', 'statut']],
             column_config={
-                "montant": st.column_config.NumberColumn("Montant (FCFA)", format="%.0f FCFA"),
+                "date_creation": "Date",
                 "type": st.column_config.TextColumn("Type Opération"),
-                "transaction_id": "Détails / Réf"
+                "montant": st.column_config.NumberColumn("Montant (FCFA)", format="%.0f FCFA"),
+                "nom_commercant": "Nom Client",
+                "numero_commercant": "N° CNI/Contribuable",
+                "mode_paiement": "Mode Paiement / Téléphone",
+                "numero_recu": "N° Reçu",
+                "statut": "Statut"
             },
-            use_container_width=True
+            use_container_width=True,
+            hide_index=True
         )
 
     with tab2:
         # Filtrer Recettes (ce qui commence par TAXE ou ACTE)
         df_recettes = df[df['type'].str.contains("TAXE|ACTE", na=False)]
-        
+
         st.metric("Total Recettes", f"{df_recettes['montant'].sum():,.0f} FCFA")
-        
+
+        # S'assurer que les colonnes existent
+        if 'nom_commercant' not in df_recettes.columns:
+            df_recettes['nom_commercant'] = ''
+        if 'numero_commercant' not in df_recettes.columns:
+            df_recettes['numero_commercant'] = ''
+        if 'mode_paiement' not in df_recettes.columns:
+            df_recettes['mode_paiement'] = ''
+        if 'numero_recu' not in df_recettes.columns:
+            df_recettes['numero_recu'] = ''
+
         st.dataframe(
-            df_recettes[['date_creation', 'type', 'montant', 'transaction_id']],
+            df_recettes[['date_creation', 'type', 'montant', 'nom_commercant', 'numero_commercant', 'mode_paiement', 'numero_recu']],
             column_config={
+                "date_creation": "Date",
+                "type": "Type",
                 "montant": st.column_config.NumberColumn("Montant (FCFA)", format="%.0f FCFA"),
-                "transaction_id": "Contribuable / Demandeur"
+                "nom_commercant": "Nom Client",
+                "numero_commercant": "N° CNI/Contribuable",
+                "mode_paiement": "Mode Paiement / Téléphone",
+                "numero_recu": "N° Reçu"
             },
-            use_container_width=True
+            use_container_width=True,
+            hide_index=True
         )
         
 
@@ -364,143 +665,8 @@ def show_alerts():
             st.rerun()
 
 
-def show_simulation():
-    """Simulation des recettes et gestion des services."""
-    st.subheader("💰 Simulation Recettes & Services")
-    
-    # Onglets : Simulation Flux et Gestion Services
-    tab_sim, tab_stocks, tab_manage = st.tabs(["💸 Recettes (Simulation)", "📦 Stocks (Simulation)", "📋 Gestion Services"])
-    
-    with tab_sim:
-        st.markdown("##### Simuler des encaissements aléatoires")
-        
-        col1, col2 = st.columns(2)
-        with col1:
-            nb_sim = st.slider("Nombre de transactions à générer", 1, 50, 5)
-        
-        with col2:
-            st.info("Ceci simule une journée d'activité au guichet.")
-            
-        # Initialization de l'état si nécessaire
-        if 'simulation_done' not in st.session_state:
-            st.session_state.simulation_done = False
-            st.session_state.montant_genere = 0
-
-        if st.button("⚡ SIMULER LES ENCAISSEMENTS"):
-            with st.spinner("Simulation de la blockchain en cours..."):
-                # APPEL AU SERVICE (Business Logic)
-                total = services.simulate_daily_revenue(nb_sim)
-                
-                # Mise à jour de l'état
-                st.session_state.simulation_done = True
-                st.session_state.montant_genere = total
-                
-                time.sleep(1)
-                st.rerun()
-
-        # Affichage du résultat persistant
-        if st.session_state.simulation_done:
-            st.success(f"✅ Simulation terminée ! Recettes générées : {st.session_state.montant_genere:,.0f} FCFA")
-            if st.button("🗑️ Effacer résultat"):
-                st.session_state.simulation_done = False
-                st.rerun()
-            st.balloons()
-
-    with tab_stocks:
-        st.markdown("##### Simuler une consommation critique")
-        st.warning("⚠️ Attention : Cette action va réduire les stocks aléatoirement pour simuler l'activité chantier.")
-        
-        if st.button("📉 SIMULER CONSOMMATION MATÉRIEL", type="primary"):
-             with st.spinner("Consommation en cours..."):
-                 nb_critiques = services.simulate_stock_consumption(10)
-                 time.sleep(1)
-                 st.rerun()
-                 
-        if 'stock_sim_msg' not in st.session_state:
-             st.session_state.stock_sim_msg = None
-             
-    with tab_manage:
-        st.write("Gestion des Tarifs (Modifiable)")
-        
-        conn = db.get_connection()
-        
-        st.markdown("**Taxes & Redevances**")
-        df_taxes = pd.read_sql_query("SELECT * FROM taxes", conn)
-        # Éditeur de données pour les Taxes
-        edited_taxes = st.data_editor(
-            df_taxes, 
-            num_rows="dynamic", 
-            key="editor_taxes",
-            use_container_width=True
-        )
-        
-        if st.button("💾 Sauvegarder Taxes"):
-            db.update_all_taxes(edited_taxes)
-            st.success("Taxes mises à jour !")
-            time.sleep(1)
-            st.rerun()
-        
-        st.markdown("---")
-        
-        st.markdown("**Formulaires & Actes**")
-        df_docs = pd.read_sql_query("SELECT * FROM formulaires", conn)
-        # Éditeur de données pour les Documents
-        edited_docs = st.data_editor(
-            df_docs, 
-            num_rows="dynamic", 
-            key="editor_docs",
-            use_container_width=True
-        )
-        
-        if st.button("💾 Sauvegarder Actes"):
-            db.update_all_formulaires(edited_docs)
-            st.success("Actes mis à jour !")
-            time.sleep(1)
-            st.rerun()
-        
-        conn.close()
-
-
 from streamlit_autorefresh import st_autorefresh
-import log_stream
-import agents
-import envoi_email
-import guichet
-import services
 import ai_forecast
-
-def show_console():
-    """Affiche la console IA en temps réel."""
-    st.markdown("### 🤖 Console IA & Blockchain (Live)")
-    
-    # Conteneur scrollable (style terminal)
-    logs = log_stream.get_logs()
-    
-    log_html = '<div style="background-color:#1E1E1E; color:#00FF00; padding:10px; border-radius:5px; height:200px; overflow-y:scroll; font-family:monospace; font-size:12px;">'
-    for log in reversed(logs): # Plus récent en haut
-        color = "#00FF00"
-        if log['level'] == "WARNING": color = "orange"
-        if log['level'] == "ERROR": color = "red"
-        
-        log_html += f'<div style="color:{color};">[{log["source"]}] {log["message"]}</div>'
-    log_html += '</div>'
-    
-    st.markdown(log_html, unsafe_allow_html=True)
-    
-    # Boutons d'action directe
-    col1, col2 = st.columns(2)
-    with col1:
-        if st.button("⚡ FORCER SIMULATION RUPTURE"):
-            # Simulation d'un scénario complet
-            st.toast("Simulation rupture lancée...", icon="🚨")
-            log_stream.add_log("INFO", "USER", "Déclenchement manuel simulation rupture 'FER'")
-            envoi_email.envoyer_email("fer", 5) # Stock bas -> Négociation
-            st.rerun()
-            
-    with col2:
-        if st.button("🧹 Vider les logs"):
-            log_stream.clear_logs()
-            st.rerun()
 
 
 def show_predictions():
@@ -562,7 +728,7 @@ def main():
     init_db()
     
     # Header
-    st.markdown('<div class="main-header">INSI-TECH GESTION INTELLIGENTE DE STOCK</div>', 
+    st.markdown('<div class="main-header">🏛️ SYSTÈME DE GESTION MUNICIPALE</div>',
                 unsafe_allow_html=True)
     
     # Sidebar
@@ -572,34 +738,22 @@ def main():
         
         page = st.radio(
             "Navigation",
-            ["📊 Dashboard", "🏛️ Guichet Mairie", "🧠 Prédictions IA", "Historique Recettes", "Historique Transactions", "🚨 Alertes", "🎮 Console IA"]
+            ["📊 Dashboard", "💳 Paiement en Ligne", "🏛️ Guichet Mairie", "Historique Recettes", "Historique Transactions", "🚨 Alertes"]
         )
         
         st.markdown("---")
 
         
         st.markdown("---")
-        
-        # AUTO PILOT TOGGLE
-        auto_pilot = st.toggle("🤖 Mode Auto-Pilote", value=False, help="Simule de l'activité automatiquement toutes les 2s")
-        
-        if st.button("🔄 Rafraîchir"):
-            st.rerun()
 
-    # LOGIQUE AUTO-PILOTE
-    if auto_pilot:
-        # Probabilité d'action à chaque refresh (toutes les 2s)
-        
-        # 70% de chance d'une transaction financière pour que ça bouge !
-        if random.random() < 0.7:
-            services.simulate_daily_revenue(1)
+        # Refresh button removed to avoid accidental page reloads
     
     # Contenu principal
     # Console visible partout en bas (ou sur page dédiée ?)
     # Pour l'instant, on l'affiche sur l'onglet Dashboard en bas pour l'effet "Wow" immédiat
     # Ou mieux : sur une page dédiée "Console IA" ou en bas de tout.
     
-    if page != "🏛️ Guichet Mairie":
+    if page not in ["🏛️ Guichet Mairie", "💳 Paiement en Ligne"]:
         show_metrics()
         st.markdown("---")
     
@@ -607,19 +761,16 @@ def main():
         show_revenue_distribution()
         st.markdown("---")
 
+    elif page == "💳 Paiement en Ligne":
+        paiement_client.show_paiement_client_page()
     elif page == "🏛️ Guichet Mairie":
         guichet.show_guichet_page()
-    elif page == "🧠 Prédictions IA":
-        show_predictions()
     elif page == "Historique Recettes":
         show_revenue_history()
     elif page == "Historique Transactions":
         show_transactions()
     elif page == "🚨 Alertes":
         show_alerts()
-    elif page == "🎮 Console IA": # Page focus console
-        show_console()
-        show_simulation()
     
     # Footer
     # ...

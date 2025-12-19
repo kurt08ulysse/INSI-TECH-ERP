@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 80" width="200" height="80">
+  <!-- Fond rouge Airtel -->
+  <rect width="200" height="80" fill="#E4002B" rx="8"/>
+
+  <!-- Logo Airtel (cercle et vagues) -->
+  <circle cx="35" cy="40" r="18" fill="white"/>
+  <path d="M 25 40 Q 30 35, 35 40 T 45 40" stroke="#E4002B" stroke-width="3" fill="none"/>
+
+  <!-- Texte Airtel -->
+  <text x="60" y="35" font-family="Arial, sans-serif" font-size="18" font-weight="bold" fill="white">airtel</text>
+
+  <!-- Texte MONEY -->
+  <text x="60" y="52" font-family="Arial, sans-serif" font-size="14" font-weight="bold" fill="white">MONEY</text>
+
+  <!-- Icône dollar -->
+  <circle cx="170" cy="40" r="12" fill="white" opacity="0.3"/>
+  <text x="165" y="48" font-family="Arial, sans-serif" font-size="18" font-weight="bold" fill="white">$</text>
+</svg>

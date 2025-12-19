@@ -1,0 +1,165 @@
+================================================================================
+              COMMENT LANCER VOTRE PROJET BLOCKCHAIN-IOT
+================================================================================
+
+VOTRE PROJET EST MAINTENANT CONNECTÉ À WAMPSERVER !
+
+✅ WampServer : ACTIF
+✅ MySQL : ACTIF (Port 3306)
+✅ Apache : ACTIF (Port 80)
+✅ Base de données : mairie_db (créée)
+✅ Configuration : .env (configuré pour MySQL)
+
+================================================================================
+                    LANCER L'APPLICATION EN 1 CLIC
+================================================================================
+
+1. Dans ce dossier, trouvez le fichier :
+
+   📄 LANCER_APPLICATION.bat
+
+2. DOUBLE-CLIQUEZ dessus
+
+3. Une fenêtre noire s'ouvre et l'application démarre
+
+4. Votre navigateur s'ouvrira automatiquement sur :
+
+   http://localhost:8501
+
+5. IMPORTANT : LAISSEZ LA FENÊTRE NOIRE OUVERTE
+   C'est le serveur de l'application
+
+================================================================================
+                        ACCÈS DEPUIS VOTRE TÉLÉPHONE
+================================================================================
+
+Si vous avez configuré le pare-feu (voir C:\wamp64\DOUBLE-CLIQUER-ICI.vbs),
+vous pouvez accéder à l'application depuis votre téléphone/tablette :
+
+📱 http://192.168.1.90:8501
+
+Assurez-vous que :
+✓ Les deux appareils sont sur le MÊME réseau WiFi
+✓ Le pare-feu Windows autorise le port 8501
+
+Pour autoriser le port 8501 dans le pare-feu :
+1. Windows + R
+2. Tapez : wf.msc
+3. Règles de trafic entrant → Nouvelle règle
+4. Port → TCP → 8501 → Autoriser → Terminer
+
+================================================================================
+                          QU'EST-CE QUE CE PROJET ?
+================================================================================
+
+C'est un Système de Gestion Municipale avec :
+
+📊 Dashboard interactif
+💳 Gestion des paiements
+📋 Formulaires administratifs
+🚗 Gestion des locations
+👥 Gestion des citoyens
+👮 Gestion des agents
+📈 Statistiques en temps réel
+🔐 Base de données MySQL sécurisée
+
+================================================================================
+                            ÉTAT DE LA MIGRATION
+================================================================================
+
+⚠️ ATTENTION : La migration automatique vers MySQL a rencontré des problèmes
+
+Actuellement :
+- Base de données MySQL : Créée ✅
+- Tables MySQL : Créées (10 tables) ✅
+- Données migrées : 0 lignes ⚠️
+
+Raison : Incompatibilité entre les schémas SQLite et MySQL
+
+SOLUTION TEMPORAIRE :
+L'application utilise encore la base SQLite (mairie.db) qui contient toutes
+vos données. Tout fonctionne normalement !
+
+Pour migrer manuellement vers MySQL plus tard :
+1. Ouvrez phpMyAdmin (http://localhost/phpmyadmin)
+2. Sélectionnez la base 'mairie_db'
+3. Vérifiez le schéma des tables
+4. Contactez le support pour assistance
+
+================================================================================
+                            ARRÊTER L'APPLICATION
+================================================================================
+
+1. Dans la fenêtre noire qui est apparue
+2. Appuyez sur Ctrl+C
+3. Tapez 'O' pour confirmer
+4. Ou fermez simplement la fenêtre
+
+================================================================================
+                        RÉSUMÉ DES URLS IMPORTANTES
+================================================================================
+
+🌐 Application Streamlit :
+   http://localhost:8501
+   http://192.168.1.90:8501
+
+🗄️ phpMyAdmin (Gestion MySQL) :
+   http://localhost/phpmyadmin
+   http://192.168.1.90/phpmyadmin
+
+🏠 WampServer Page d'accueil :
+   http://localhost
+   http://192.168.1.90
+
+================================================================================
+                            DÉPANNAGE
+================================================================================
+
+Problème 1 : "Ce site est inaccessible"
+→ Vérifiez que la fenêtre noire (serveur) est ouverte
+→ Attendez 30 secondes après le lancement
+→ Actualisez la page (F5)
+
+Problème 2 : "Address already in use"
+→ Le port 8501 est déjà utilisé
+→ Fermez toutes les fenêtres de l'application
+→ Relancez LANCER_APPLICATION.bat
+
+Problème 3 : Erreur de base de données
+→ Vérifiez que WampServer est démarré (icône verte)
+→ Ouvrez le fichier .env et vérifiez la configuration
+
+Problème 4 : Page blanche
+→ Attendez quelques secondes (chargement initial)
+→ Vérifiez la console (F12) pour voir les erreurs
+→ Actualisez la page
+
+================================================================================
+                        FICHIERS CRÉÉS POUR VOUS
+================================================================================
+
+📄 LANCER_APPLICATION.bat          ← Pour démarrer l'application
+📄 !!! COMMENT LANCER LE PROJET !!!.txt  ← Ce fichier
+📄 .env                             ← Configuration de la base de données
+📄 dashboard.py                     ← Application principale
+📄 mairie.db                        ← Base de données SQLite (données actuelles)
+
+Dans C:\wamp64 :
+📄 DOUBLE-CLIQUER-ICI.vbs           ← Pour autoriser l'accès réseau
+📄 ACTIVER-ACCES-RESEAU.bat         ← Alternative pour le pare-feu
+
+================================================================================
+                            BESOIN D'AIDE ?
+================================================================================
+
+1. Consultez ce fichier
+2. Vérifiez que WampServer est démarré (icône verte)
+3. Vérifiez les logs : logs/app.log
+4. Contactez le support avec une capture d'écran de l'erreur
+
+================================================================================
+
+Date : 19 Décembre 2025
+Version : 1.0 - Configuration WampServer + Streamlit
+
+================================================================================

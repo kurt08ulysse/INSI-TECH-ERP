@@ -7,22 +7,11 @@ from datetime import datetime
 
 # Créer le dossier logs s'il n'existe pas
 LOGS_DIR = os.path.join(os.path.dirname(__file__), "logs")
-import log_stream  # NOUVEAU
 
 # Configuration
 LOG_DIR = "logs"
 if not os.path.exists(LOG_DIR):
     os.makedirs(LOG_DIR)
-
-class StreamlitLogHandler(logging.Handler):
-    """Handler custom pour envoyer les logs vers le UI Streamlit."""
-    def emit(self, record):
-        try:
-            msg = self.format(record)
-            # On parse grossièrement ou on passe tout
-            log_stream.add_log(record.levelname, record.name, record.getMessage())
-        except Exception:
-            self.handleError(record)
 
 def get_logger(name):
     """Récupère un logger configuré."""
@@ -43,11 +32,6 @@ def get_logger(name):
         f_format = logging.Formatter('%(asctime)s | %(levelname)-8s | %(name)s | %(message)s')
         f_handler.setFormatter(f_format)
         logger.addHandler(f_handler)
-        
-        # 3. Streamlit Handler (NOUVEAU)
-        s_handler = StreamlitLogHandler()
-        s_handler.setLevel(logging.INFO)
-        logger.addHandler(s_handler)
 
     return logger
 
