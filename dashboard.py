@@ -328,7 +328,7 @@ def activer_surveillance_ia():
         pass
 
 
-def show_metrics():
+def show_metrics(show_last_update=False):
     """Affiche les métriques principales pour la mairie."""
     stats = db.get_statistics()
 
@@ -357,7 +357,9 @@ def show_metrics():
         delta_color="inverse"
     )
 
-    st.caption(f"🕐 Dernière MAJ: {datetime.now().strftime('%H:%M:%S')}")
+    # Afficher "Dernière MAJ" uniquement sur le Dashboard
+    if show_last_update:
+        st.caption(f"🕐 Dernière MAJ: {datetime.now().strftime('%H:%M:%S')}")
 
 
 def show_revenue_distribution():
@@ -1125,11 +1127,12 @@ def main():
     # Console visible partout en bas (ou sur page dédiée ?)
     # Pour l'instant, on l'affiche sur l'onglet Dashboard en bas pour l'effet "Wow" immédiat
     # Ou mieux : sur une page dédiée "Console IA" ou en bas de tout.
-    
+
     if page not in ["🏛️ Guichet Mairie", "💳 Paiement en Ligne"]:
-        show_metrics()
+        # Afficher "Dernière MAJ" uniquement sur le Dashboard
+        show_metrics(show_last_update=(page == "📊 Dashboard"))
         st.markdown("---")
-    
+
     if page == "📊 Dashboard":
         show_revenue_distribution()
         st.markdown("---")
