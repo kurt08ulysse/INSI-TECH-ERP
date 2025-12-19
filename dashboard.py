@@ -562,8 +562,8 @@ def show_revenue_history():
 
 
 def show_transactions():
-    """Affiche l'historique des transactions."""
-    st.subheader("💰 Historique des Transactions & Recettes")
+    """Affiche l'historique interactif des transactions avec filtres et graphiques."""
+    st.subheader("📜 Historique des Transactions & Recettes")
 
     transactions = db.get_all_transactions()
 
@@ -572,159 +572,238 @@ def show_transactions():
         return
 
     df = pd.DataFrame(transactions)
+    df['date'] = pd.to_datetime(df['date_creation'], format='mixed')
 
-    # Graphique interactif amélioré des transactions dans le temps
-    if 'date_creation' in df.columns:
-        df['date'] = pd.to_datetime(df['date_creation'], format='mixed').dt.date
+    # === FILTRES INTERACTIFS ===
+    st.markdown("### 🔍 Filtres")
+    col_f1, col_f2, col_f3 = st.columns(3)
 
-        # Agréger par jour: somme des montants ET nombre de transactions
-        daily = df.groupby('date').agg({
-            'montant': 'sum',
-            'id': 'count'
-        }).reset_index()
-        daily.columns = ['date', 'montant_total', 'nb_transactions']
-
-        # Créer un graphique combiné (barres + ligne)
-        fig = go.Figure()
-
-        # Barres pour les montants
-        fig.add_trace(go.Bar(
-            x=daily['date'],
-            y=daily['montant_total'],
-            name='Montant Total',
-            marker_color='#4CAF50',
-            hovertemplate='<b>%{x}</b><br>' +
-                         'Montant: %{y:,.0f} FCFA<br>' +
-                         '<extra></extra>'
-        ))
-
-        # Ligne pour le nombre de transactions (axe secondaire)
-        fig.add_trace(go.Scatter(
-            x=daily['date'],
-            y=daily['nb_transactions'],
-            name='Nombre de Transactions',
-            mode='lines+markers',
-            line=dict(color='#FF9800', width=3),
-            marker=dict(size=8, symbol='diamond'),
-            yaxis='y2',
-            hovertemplate='<b>%{x}</b><br>' +
-                         'Transactions: %{y}<br>' +
-                         '<extra></extra>'
-        ))
-
-        # Mise en page améliorée
-        fig.update_layout(
-            title={
-                'text': '📊 Évolution des Recettes & Nombre de Transactions',
-                'x': 0.5,
-                'xanchor': 'center',
-                'font': {'size': 18, 'color': '#1E88E5'}
-            },
-            xaxis_title='Date',
-            yaxis_title='Montant Total (FCFA)',
-            yaxis2=dict(
-                title='Nombre de Transactions',
-                overlaying='y',
-                side='right',
-                showgrid=False
-            ),
-            height=500,
-            hovermode='x unified',
-            plot_bgcolor='rgba(0,0,0,0)',
-            paper_bgcolor='rgba(0,0,0,0)',
-            legend=dict(
-                orientation="h",
-                yanchor="bottom",
-                y=1.02,
-                xanchor="center",
-                x=0.5
-            ),
-            xaxis=dict(
-                showgrid=True,
-                gridwidth=1,
-                gridcolor='rgba(128,128,128,0.2)'
-            ),
-            yaxis=dict(
-                showgrid=True,
-                gridwidth=1,
-                gridcolor='rgba(128,128,128,0.2)'
-            )
+    with col_f1:
+        # Filtre par période
+        periode = st.selectbox("📅 Période",
+            ["Tout", "Aujourd'hui", "7 derniers jours", "30 derniers jours", "Ce mois", "Personnalisé"],
+            index=2
         )
 
-        # Afficher le graphique avec configuration interactive complète
-        st.plotly_chart(fig, use_container_width=True, config={
-            'displayModeBar': True,
-            'displaylogo': False,
-            'modeBarButtonsToAdd': ['drawline', 'drawopenpath', 'eraseshape'],
-            'toImageButtonOptions': {
-                'format': 'png',
-                'filename': f'transactions_{datetime.now().strftime("%Y%m%d")}',
-                'height': 600,
-                'width': 1200,
-                'scale': 2
-            }
-        })
+    with col_f2:
+        # Filtre par type
+        types_disponibles = ["Tous"] + sorted(df['type'].unique().tolist())
+        type_filtre = st.selectbox("🏷️ Type de transaction", types_disponibles)
 
-    # Créer des onglets pour séparer l'Affichage Global et Recettes
-    tab1, tab2 = st.tabs(["🌎 Tout", "📥 Recettes (Taxes & Actes)"])
-    
-    with tab1:
+    with col_f3:
+        # Filtre par montant minimum
+        montant_min = st.number_input("💰 Montant minimum (FCFA)", min_value=0, value=0, step=1000)
+
+    # Appliquer les filtres
+    df_filtre = df.copy()
+
+    # Filtre période
+    if periode == "Aujourd'hui":
+        df_filtre = df_filtre[df_filtre['date'].dt.date == datetime.now().date()]
+    elif periode == "7 derniers jours":
+        df_filtre = df_filtre[df_filtre['date'] >= (datetime.now() - pd.Timedelta(days=7))]
+    elif periode == "30 derniers jours":
+        df_filtre = df_filtre[df_filtre['date'] >= (datetime.now() - pd.Timedelta(days=30))]
+    elif periode == "Ce mois":
+        df_filtre = df_filtre[df_filtre['date'].dt.month == datetime.now().month]
+    elif periode == "Personnalisé":
+        col_d1, col_d2 = st.columns(2)
+        with col_d1:
+            date_debut = st.date_input("Date début", value=datetime.now() - pd.Timedelta(days=30))
+        with col_d2:
+            date_fin = st.date_input("Date fin", value=datetime.now())
+        df_filtre = df_filtre[(df_filtre['date'].dt.date >= date_debut) &
+                               (df_filtre['date'].dt.date <= date_fin)]
+
+    # Filtre type
+    if type_filtre != "Tous":
+        df_filtre = df_filtre[df_filtre['type'] == type_filtre]
+
+    # Filtre montant
+    df_filtre = df_filtre[df_filtre['montant'] >= montant_min]
+
+    st.markdown("---")
+
+    # === KPI STATISTIQUES ===
+    st.markdown("### 📊 Statistiques")
+    kpi1, kpi2, kpi3, kpi4 = st.columns(4)
+
+    with kpi1:
+        st.metric("💵 Total", f"{df_filtre['montant'].sum():,.0f} FCFA")
+
+    with kpi2:
+        st.metric("📝 Transactions", len(df_filtre))
+
+    with kpi3:
+        avg = df_filtre['montant'].mean() if len(df_filtre) > 0 else 0
+        st.metric("📊 Moyenne", f"{avg:,.0f} FCFA")
+
+    with kpi4:
+        max_tx = df_filtre['montant'].max() if len(df_filtre) > 0 else 0
+        st.metric("🔝 Maximum", f"{max_tx:,.0f} FCFA")
+
+    st.markdown("---")
+
+    # === GRAPHIQUES INTERACTIFS ===
+    st.markdown("### 📈 Visualisations")
+
+    # Onglets pour différents graphiques
+    tab_ev, tab_rep, tab_top = st.tabs(["📈 Évolution", "🍩 Répartition", "🏆 Top 10"])
+
+    with tab_ev:
+        # Graphique évolution temporelle
+        if len(df_filtre) > 0:
+            daily = df_filtre.groupby(df_filtre['date'].dt.date).agg({
+                'montant': 'sum',
+                'id': 'count'
+            }).reset_index()
+            daily.columns = ['date', 'montant_total', 'nb_transactions']
+
+            fig_ev = go.Figure()
+
+            # Barres pour montants
+            fig_ev.add_trace(go.Bar(
+                x=daily['date'],
+                y=daily['montant_total'],
+                name='Recettes',
+                marker_color='#4CAF50',
+                hovertemplate='<b>%{x}</b><br>Recettes: %{y:,.0f} FCFA<extra></extra>'
+            ))
+
+            # Ligne pour nb transactions
+            fig_ev.add_trace(go.Scatter(
+                x=daily['date'],
+                y=daily['nb_transactions'],
+                name='Nombre',
+                mode='lines+markers',
+                line=dict(color='#FF9800', width=3),
+                marker=dict(size=8),
+                yaxis='y2',
+                hovertemplate='<b>%{x}</b><br>Transactions: %{y}<extra></extra>'
+            ))
+
+            fig_ev.update_layout(
+                title='Évolution quotidienne',
+                xaxis_title='Date',
+                yaxis_title='Montant (FCFA)',
+                yaxis2=dict(title='Nombre', overlaying='y', side='right'),
+                height=400,
+                hovermode='x unified'
+            )
+
+            st.plotly_chart(fig_ev, use_container_width=True)
+        else:
+            st.info("Aucune donnée pour cette période")
+
+    with tab_rep:
+        # Camembert répartition par type
+        if len(df_filtre) > 0:
+            repartition = df_filtre.groupby('type')['montant'].sum().reset_index()
+
+            fig_pie = px.pie(
+                repartition,
+                values='montant',
+                names='type',
+                title='Répartition par type de transaction',
+                hole=0.4,
+                color_discrete_sequence=px.colors.sequential.RdBu
+            )
+
+            fig_pie.update_traces(
+                textposition='inside',
+                textinfo='percent+label',
+                hovertemplate='<b>%{label}</b><br>%{value:,.0f} FCFA<br>%{percent}<extra></extra>'
+            )
+
+            fig_pie.update_layout(height=400)
+
+            st.plotly_chart(fig_pie, use_container_width=True)
+
+            # Tableau récapitulatif par type
+            st.markdown("#### 📋 Détail par type")
+            recap = df_filtre.groupby('type').agg({
+                'montant': ['sum', 'count', 'mean']
+            }).reset_index()
+            recap.columns = ['Type', 'Total (FCFA)', 'Nb', 'Moyenne (FCFA)']
+            recap['Total (FCFA)'] = recap['Total (FCFA)'].apply(lambda x: f"{x:,.0f}")
+            recap['Moyenne (FCFA)'] = recap['Moyenne (FCFA)'].apply(lambda x: f"{x:,.0f}")
+
+            st.dataframe(recap, use_container_width=True, hide_index=True)
+        else:
+            st.info("Aucune donnée pour cette période")
+
+    with tab_top:
+        # Top 10 contributeurs
+        if len(df_filtre) > 0 and 'nom_commercant' in df_filtre.columns:
+            top_contrib = df_filtre.groupby('nom_commercant')['montant'].sum().sort_values(ascending=False).head(10).reset_index()
+
+            if len(top_contrib) > 0:
+                fig_top = px.bar(
+                    top_contrib,
+                    x='montant',
+                    y='nom_commercant',
+                    orientation='h',
+                    title='Top 10 des contributeurs',
+                    labels={'montant': 'Montant total (FCFA)', 'nom_commercant': 'Contribuable'},
+                    color='montant',
+                    color_continuous_scale='Greens'
+                )
+
+                fig_top.update_layout(
+                    height=400,
+                    showlegend=False,
+                    yaxis={'categoryorder': 'total ascending'}
+                )
+
+                fig_top.update_traces(
+                    hovertemplate='<b>%{y}</b><br>%{x:,.0f} FCFA<extra></extra>'
+                )
+
+                st.plotly_chart(fig_top, use_container_width=True)
+            else:
+                st.info("Données de contributeurs non disponibles")
+        else:
+            st.info("Aucune donnée pour cette période")
+
+    st.markdown("---")
+
+    # === TABLEAU DES TRANSACTIONS ===
+    st.markdown("### 📋 Détail des transactions")
+
+    if len(df_filtre) > 0:
         # S'assurer que les colonnes existent
-        if 'nom_commercant' not in df.columns:
-            df['nom_commercant'] = ''
-        if 'numero_commercant' not in df.columns:
-            df['numero_commercant'] = ''
-        if 'mode_paiement' not in df.columns:
-            df['mode_paiement'] = ''
-        if 'numero_recu' not in df.columns:
-            df['numero_recu'] = ''
+        for col in ['nom_commercant', 'numero_commercant', 'mode_paiement', 'numero_recu']:
+            if col not in df_filtre.columns:
+                df_filtre[col] = ''
 
+        # Afficher le tableau
         st.dataframe(
-            df[['date_creation', 'type', 'montant', 'nom_commercant', 'numero_commercant', 'mode_paiement', 'numero_recu', 'statut']],
+            df_filtre[['date_creation', 'type', 'montant', 'nom_commercant', 'numero_commercant',
+                       'mode_paiement', 'numero_recu', 'statut']].sort_values('date_creation', ascending=False),
             column_config={
-                "date_creation": "Date",
-                "type": st.column_config.TextColumn("Type Opération"),
-                "montant": st.column_config.NumberColumn("Montant (FCFA)", format="%.0f FCFA"),
-                "nom_commercant": "Nom Client",
-                "numero_commercant": "N° CNI/Contribuable",
-                "mode_paiement": "Mode Paiement / Téléphone",
+                "date_creation": "Date & Heure",
+                "type": "Type",
+                "montant": st.column_config.NumberColumn("Montant", format="%.0f FCFA"),
+                "nom_commercant": "Contribuable",
+                "numero_commercant": "N° CNI",
+                "mode_paiement": "Paiement",
                 "numero_recu": "N° Reçu",
                 "statut": "Statut"
             },
             use_container_width=True,
-            hide_index=True
+            hide_index=True,
+            height=400
         )
 
-    with tab2:
-        # Filtrer Recettes (ce qui commence par TAXE ou ACTE)
-        df_recettes = df[df['type'].str.contains("TAXE|ACTE", na=False)]
-
-        st.metric("Total Recettes", f"{df_recettes['montant'].sum():,.0f} FCFA")
-
-        # S'assurer que les colonnes existent
-        if 'nom_commercant' not in df_recettes.columns:
-            df_recettes['nom_commercant'] = ''
-        if 'numero_commercant' not in df_recettes.columns:
-            df_recettes['numero_commercant'] = ''
-        if 'mode_paiement' not in df_recettes.columns:
-            df_recettes['mode_paiement'] = ''
-        if 'numero_recu' not in df_recettes.columns:
-            df_recettes['numero_recu'] = ''
-
-        st.dataframe(
-            df_recettes[['date_creation', 'type', 'montant', 'nom_commercant', 'numero_commercant', 'mode_paiement', 'numero_recu']],
-            column_config={
-                "date_creation": "Date",
-                "type": "Type",
-                "montant": st.column_config.NumberColumn("Montant (FCFA)", format="%.0f FCFA"),
-                "nom_commercant": "Nom Client",
-                "numero_commercant": "N° CNI/Contribuable",
-                "mode_paiement": "Mode Paiement / Téléphone",
-                "numero_recu": "N° Reçu"
-            },
-            use_container_width=True,
-            hide_index=True
+        # Bouton d'export
+        st.download_button(
+            label="📥 Télécharger en CSV",
+            data=df_filtre.to_csv(index=False).encode('utf-8'),
+            file_name=f"transactions_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv",
+            mime="text/csv"
         )
+    else:
+        st.info("Aucune transaction correspondant aux filtres")
         
 
     
