@@ -742,32 +742,36 @@ def show_alerts():
         st.rerun()
     
     for alerte in alertes:
+        # Récupérer montant et description en toute sécurité
+        montant = alerte.get('montant', 0) or 0
+        description = alerte.get('description', '')
+
         # Couleur selon type
         if alerte['type'] == 'STOCK_CRITIQUE':
             color_border = "red"
             icon = "🚨"
             provenance = "Détection automatique seuil critique"
-            valeur_lbl = f"{alerte['quantite']} unités"
+            valeur_lbl = f"{int(montant)} unités"
         elif alerte['type'] == 'GROS_PAIEMENT':
             color_border = "#4CAF50" # Vert
             icon = "💰"
             provenance = "Transaction importante détectée"
-            valeur_lbl = f"{alerte['quantite']} FCFA"
+            valeur_lbl = f"{int(montant):,} FCFA"
         elif alerte['type'] == 'ANOMALIE_TAXE':
             color_border = "#9C27B0" # Violet
             icon = "🕵️"
             provenance = "Montant suspect détecté (Normes non respectées)"
-            valeur_lbl = f"{alerte['quantite']} FCFA"
+            valeur_lbl = f"{int(montant):,} FCFA"
         elif alerte['type'] == 'RETARD_PAIEMENT':
             color_border = "#FF9800" # Orange Foncé
             icon = "⏳"
             provenance = "Retard de paiement détecté par l'IA"
-            valeur_lbl = f"En attente"
+            valeur_lbl = "En attente"
         elif alerte['type'] == 'RECETTE_FAIBLE':
             color_border = "#FF5722" # Orange Vif
             icon = "📉"
             provenance = "Baisse anormale des recettes détectée"
-            valeur_lbl = f"{alerte['quantite']} FCFA (Total Jour)"
+            valeur_lbl = f"{int(montant):,} FCFA (Total Jour)"
         elif alerte['type'] == 'CRITIQUE_FINANCIER':
             color_border = "#D50000" # Rouge Sang
             icon = "📛"
@@ -777,22 +781,25 @@ def show_alerts():
             color_border = "orange"
             icon = "⚠️"
             provenance = "Système"
-            valeur_lbl = f"{alerte['quantite']}"
-        
+            valeur_lbl = f"{int(montant):,}" if montant else "N/A"
+
         container = st.container()
         container.markdown(f"""
         <div style="border: 1px solid {color_border}; padding: 10px; border-radius: 5px; margin-bottom: 10px; border-left: 5px solid {color_border};">
-            <h4 style="margin: 0;">{icon} {alerte['matiere']}</h4>
-            <div style="display: flex; justify_content: space-between;">
+            <h4 style="margin: 0;">{icon} {alerte['titre']}</h4>
+            <div style="display: flex; justify-content: space-between;">
                 <span><strong>Info:</strong> {valeur_lbl}</span>
                 <span style="color: #666; font-size: 0.8em;">{alerte['date_creation']}</span>
             </div>
             <div style="font-size: 0.9em; margin-top: 5px;">
+                <em>{description}</em>
+            </div>
+            <div style="font-size: 0.85em; margin-top: 3px; color: #888;">
                 <em>Provenance : {provenance}</em>
             </div>
         </div>
         """, unsafe_allow_html=True)
-        
+
         if container.button(f"✅ Marquer comme traité", key=f"treat_{alerte['id']}"):
             db.mark_alerte_treated(alerte['id'])
             st.rerun()
