@@ -1093,6 +1093,93 @@ def show_marches_map():
         if marche_info['description']:
             st.info(f"ℹ️ **Description:** {marche_info['description']}")
 
+    # ========== SECTION BASE DE DONNÉES CLIENTS ==========
+    st.markdown("---")
+    st.markdown("""
+    <h3 style='text-align: center; color: #1E88E5; margin-top: 2rem;'>
+    📊 Base de Données Clients des Marchés
+    </h3>
+    """, unsafe_allow_html=True)
+
+    # Statistiques globales clients
+    clients_stats = db.get_clients_stats()
+
+    col1, col2, col3 = st.columns(3)
+    with col1:
+        st.metric("👥 Total Clients Actifs", clients_stats['total_clients'])
+    with col2:
+        st.metric("🏪 Catégories d'Étals", clients_stats['total_categories'])
+    with col3:
+        st.metric("🗺️ Marchés avec Clients", clients_stats['marches_avec_clients'])
+
+    st.markdown("---")
+
+    # Sélecteur de marché pour la base de données clients
+    st.markdown("### 🔍 Recherche par Marché")
+
+    marche_selected = st.selectbox(
+        "Sélectionnez un marché pour voir les clients enregistrés:",
+        df_marches['nom_marche'].tolist(),
+        key="marche_clients_selector"
+    )
+
+    if marche_selected:
+        # Obtenir l'ID du marché sélectionné
+        marche_id = df_marches[df_marches['nom_marche'] == marche_selected].iloc[0]['id']
+
+        # Récupérer les catégories et leur nombre de clients
+        categories = db.get_categories_by_marche(marche_id)
+
+        if not categories:
+            st.info(f"ℹ️ Aucun client enregistré pour le marché **{marche_selected}**")
+        else:
+            st.success(f"📋 **{len(categories)}** catégorie(s) d'étals avec clients")
+
+            # Afficher chaque catégorie avec ses clients
+            for cat in categories:
+                categorie_nom = cat['categorie_etal']
+                nombre_clients = cat['nombre_clients']
+
+                # Expander pour chaque catégorie
+                with st.expander(f"🏷️ **{categorie_nom}** ({nombre_clients} client{'s' if nombre_clients > 1 else ''})"):
+                    # Récupérer les clients de cette catégorie
+                    clients = db.get_clients_by_categorie(marche_id, categorie_nom)
+
+                    for i, client in enumerate(clients, 1):
+                        # Afficher les informations du client dans une card
+                        statut_color = "#4CAF50" if client['statut'] == 'Actif' else "#FFA726"
+                        statut_icon = "✅" if client['statut'] == 'Actif' else "⏸️"
+
+                        st.markdown(f"""
+                        <div style='background-color: #f8f9fa; padding: 1rem; border-radius: 8px; margin-bottom: 1rem; border-left: 4px solid {statut_color};'>
+                            <div style='display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;'>
+                                <h4 style='margin: 0; color: #1E88E5;'>👤 {client['nom_complet']}</h4>
+                                <span style='background-color: {statut_color}; color: white; padding: 0.25rem 0.75rem; border-radius: 12px; font-size: 0.85em;'>
+                                    {statut_icon} {client['statut']}
+                                </span>
+                            </div>
+                            <div style='display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 0.5rem; font-size: 0.9em;'>
+                                <div><strong>🆔 CNI:</strong> {client['numero_cni'] or 'N/A'}</div>
+                                <div><strong>📱 Téléphone:</strong> {client['telephone'] or 'N/A'}</div>
+                                <div><strong>🏪 Étal N°:</strong> {client['numero_etal'] or 'N/A'}</div>
+                                <div><strong>📦 Produits:</strong> {client['type_produits'] or 'N/A'}</div>
+                                <div><strong>📅 Inscription:</strong> {client['date_inscription']}</div>
+                            </div>
+                        </div>
+                        """, unsafe_allow_html=True)
+
+            # Option d'export CSV
+            st.markdown("---")
+            all_clients = db.get_clients_by_marche(marche_id)
+            if all_clients:
+                df_clients = pd.DataFrame(all_clients)
+                st.download_button(
+                    label=f"📥 Télécharger tous les clients de {marche_selected} (CSV)",
+                    data=df_clients.to_csv(index=False).encode('utf-8'),
+                    file_name=f"clients_{marche_selected.replace(' ', '_')}_{datetime.now().strftime('%Y%m%d')}.csv",
+                    mime="text/csv"
+                )
+
 
 def main():
     """Point d'entrée principal."""

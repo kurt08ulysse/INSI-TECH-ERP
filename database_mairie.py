@@ -217,6 +217,23 @@ def init_database():
         )
     ''')
 
+    # 12. CLIENTS DES MARCHÉS (Commerçants/Vendeurs par marché et catégorie)
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS clients_marches (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            marche_id INTEGER NOT NULL,
+            categorie_etal VARCHAR(100) NOT NULL,
+            nom_complet VARCHAR(200) NOT NULL,
+            numero_cni VARCHAR(50),
+            telephone VARCHAR(20),
+            numero_etal VARCHAR(20),
+            type_produits TEXT,
+            date_inscription DATE DEFAULT CURRENT_DATE,
+            statut VARCHAR(20) DEFAULT 'Actif',
+            FOREIGN KEY (marche_id) REFERENCES marches(id)
+        )
+    ''')
+
     # ==================== SEEDING DES DONNÉES ====================
 
     # 1. TAXES
@@ -404,6 +421,98 @@ def init_database():
             marches_data
         )
         logger.info("✅ Marchés municipaux créés")
+
+    # 12. CLIENTS DES MARCHÉS (Base de données clients par marché et catégorie)
+    cursor.execute("SELECT COUNT(*) FROM clients_marches")
+    if cursor.fetchone()[0] == 0:
+        clients_data = [
+            # GRAND MARCHÉ DE POTOS (marche_id=1)
+            # Alimentation
+            (1, 'Alimentation', 'Jean Mbadinga', 'CNI-001234', '+241 062 12 34 56', 'A12', 'Fruits et légumes frais', '2024-01-15', 'Actif'),
+            (1, 'Alimentation', 'Marie Ondimba', 'CNI-001235', '+241 062 23 45 67', 'A15', 'Poissonnerie', '2024-01-20', 'Actif'),
+            (1, 'Alimentation', 'Paul Nze', 'CNI-001236', '+241 062 34 56 78', 'A18', 'Boucherie', '2024-02-10', 'Actif'),
+            (1, 'Alimentation', 'Sophie Makaya', 'CNI-001237', '+241 062 45 67 89', 'A22', 'Produits vivriers', '2024-02-15', 'Actif'),
+            (1, 'Alimentation', 'André Boukinda', 'CNI-001238', '+241 062 56 78 90', 'A25', 'Épicerie fine', '2024-03-01', 'Actif'),
+
+            # Vêtements
+            (1, 'Vêtements', 'Claire Moutsinga', 'CNI-002001', '+241 063 11 22 33', 'V05', 'Vêtements femme', '2024-01-10', 'Actif'),
+            (1, 'Vêtements', 'Patrick Ngoulou', 'CNI-002002', '+241 063 22 33 44', 'V08', 'Vêtements homme', '2024-01-25', 'Actif'),
+            (1, 'Vêtements', 'Micheline Koumba', 'CNI-002003', '+241 063 33 44 55', 'V12', 'Vêtements enfants', '2024-02-05', 'Actif'),
+            (1, 'Vêtements', 'Joseph Bourobou', 'CNI-002004', '+241 063 44 55 66', 'V15', 'Tissus africains', '2024-02-20', 'Actif'),
+
+            # Électronique
+            (1, 'Électronique', 'Rodrigue Minko', 'CNI-003001', '+241 064 11 22 33', 'E03', 'Téléphones et accessoires', '2024-01-08', 'Actif'),
+            (1, 'Électronique', 'Stéphanie Ondo', 'CNI-003002', '+241 064 22 33 44', 'E06', 'Électronique grand public', '2024-02-12', 'Actif'),
+            (1, 'Électronique', 'Marcel Ngoma', 'CNI-003003', '+241 064 33 44 55', 'E09', 'Réparation téléphones', '2024-03-05', 'Actif'),
+
+            # Quincaillerie
+            (1, 'Quincaillerie', 'Emmanuel Biteghe', 'CNI-004001', '+241 065 11 22 33', 'Q02', 'Outillage et matériaux', '2024-01-12', 'Actif'),
+            (1, 'Quincaillerie', 'Pauline Matsanga', 'CNI-004002', '+241 065 22 33 44', 'Q05', 'Peinture et fournitures', '2024-02-18', 'Actif'),
+
+            # Cosmétiques
+            (1, 'Cosmétiques', 'Sylvie Ngoua', 'CNI-005001', '+241 066 11 22 33', 'C04', 'Produits de beauté', '2024-01-18', 'Actif'),
+            (1, 'Cosmétiques', 'Rachel Mayila', 'CNI-005002', '+241 066 22 33 44', 'C07', 'Coiffure et soins', '2024-02-22', 'Actif'),
+
+            # Artisanat
+            (1, 'Artisanat', 'Daniel Moundounga', 'CNI-006001', '+241 067 11 22 33', 'ART01', 'Artisanat local', '2024-01-05', 'Actif'),
+            (1, 'Artisanat', 'Brigitte Lekogo', 'CNI-006002', '+241 067 22 33 44', 'ART03', 'Objets décoratifs', '2024-02-08', 'Actif'),
+
+            # Chaussures
+            (1, 'Chaussures', 'Albert Mounguengui', 'CNI-007001', '+241 068 11 22 33', 'CH02', 'Chaussures hommes/femmes', '2024-01-22', 'Actif'),
+            (1, 'Chaussures', 'Francine Boussougou', 'CNI-007002', '+241 068 22 33 44', 'CH05', 'Maroquinerie', '2024-02-28', 'Actif'),
+
+            # MARCHÉ DE NGOUNGOULOU (marche_id=2)
+            # Alimentation
+            (2, 'Alimentation', 'Georges Akendengue', 'CNI-101001', '+241 062 77 88 99', 'N-A08', 'Fruits et légumes', '2024-01-10', 'Actif'),
+            (2, 'Alimentation', 'Hortense Mabika', 'CNI-101002', '+241 062 88 99 00', 'N-A12', 'Produits vivriers', '2024-01-25', 'Actif'),
+            (2, 'Alimentation', 'Léon Mouanda', 'CNI-101003', '+241 062 99 00 11', 'N-A15', 'Poissonnerie', '2024-02-10', 'Actif'),
+
+            # Vêtements
+            (2, 'Vêtements', 'Bernadette Moussounda', 'CNI-102001', '+241 063 77 88 99', 'N-V05', 'Vêtements traditionnel', '2024-01-15', 'Actif'),
+            (2, 'Vêtements', 'Jacques Mpaga', 'CNI-102002', '+241 063 88 99 00', 'N-V08', 'Vêtements sport', '2024-02-20', 'Actif'),
+
+            # Électronique
+            (2, 'Électronique', 'Christian Nzamba', 'CNI-103001', '+241 064 77 88 99', 'N-E03', 'Accessoires téléphone', '2024-01-08', 'Actif'),
+
+            # Articles ménagers
+            (2, 'Articles ménagers', 'Martine Nguema', 'CNI-108001', '+241 069 77 88 99', 'N-M02', 'Vaisselle et ustensiles', '2024-02-05', 'Actif'),
+            (2, 'Articles ménagers', 'François Boundzanga', 'CNI-108002', '+241 069 88 99 00', 'N-M05', 'Équipement cuisine', '2024-02-15', 'Actif'),
+
+            # MARCHÉ DE LA FOI (marche_id=3)
+            # Alimentation
+            (3, 'Alimentation', 'Thérèse Nziengui', 'CNI-201001', '+241 062 55 66 77', 'F-A05', 'Produits bio', '2024-01-12', 'Actif'),
+            (3, 'Alimentation', 'Urbain Medzo', 'CNI-201002', '+241 062 66 77 88', 'F-A10', 'Épicerie', '2024-02-08', 'Actif'),
+
+            # Vêtements
+            (3, 'Vêtements', 'Joséphine Moussounda', 'CNI-202001', '+241 063 55 66 77', 'F-V03', 'Vêtements dame', '2024-01-20', 'Actif'),
+            (3, 'Vêtements', 'Olivier Nkoghe', 'CNI-202002', '+241 063 66 77 88', 'F-V07', 'Chemises et pantalons', '2024-02-18', 'Actif'),
+
+            # Cosmétiques
+            (3, 'Cosmétiques', 'Nadège Obiang', 'CNI-205001', '+241 066 55 66 77', 'F-C02', 'Parfumerie', '2024-01-25', 'Actif'),
+
+            # Artisanat
+            (3, 'Artisanat', 'Serge Moukala', 'CNI-206001', '+241 067 55 66 77', 'F-ART01', 'Sculptures sur bois', '2024-02-12', 'Actif'),
+
+            # MARCHÉ DE BAPILI (marche_id=4)
+            # Alimentation
+            (4, 'Alimentation', 'Pierrette Malonga', 'CNI-301001', '+241 062 44 55 66', 'B-A03', 'Produits du terroir', '2024-01-18', 'Actif'),
+            (4, 'Alimentation', 'Gaston Ikapi', 'CNI-301002', '+241 062 55 66 77', 'B-A07', 'Viande fumée', '2024-02-10', 'Actif'),
+
+            # Vêtements
+            (4, 'Vêtements', 'Véronique Mbongo', 'CNI-302001', '+241 063 44 55 66', 'B-V02', 'Vêtements bébé', '2024-01-22', 'Actif'),
+
+            # Quincaillerie
+            (4, 'Quincaillerie', 'Hubert Ntoutoume', 'CNI-304001', '+241 065 44 55 66', 'B-Q01', 'Petits outils', '2024-02-05', 'Actif'),
+
+            # Articles ménagers
+            (4, 'Articles ménagers', 'Germaine Mouity', 'CNI-308001', '+241 069 44 55 66', 'B-M01', 'Plastiques ménagers', '2024-02-15', 'Actif'),
+        ]
+
+        cursor.executemany(
+            "INSERT INTO clients_marches (marche_id, categorie_etal, nom_complet, numero_cni, telephone, numero_etal, type_produits, date_inscription, statut) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
+            clients_data
+        )
+        logger.info("✅ Clients des marchés créés")
 
     conn.commit()
     conn.close()
@@ -708,6 +817,78 @@ def get_marches_stats():
         'total_marches': total_marches,
         'total_etals': total_etals,
         'tarif_moyen': tarif_moyen
+    }
+
+
+# ==================== FONCTIONS CLIENTS DES MARCHÉS ====================
+
+def get_clients_by_marche(marche_id: int):
+    """Retourne tous les clients d'un marché spécifique."""
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute('''
+        SELECT id, marche_id, categorie_etal, nom_complet, numero_cni,
+               telephone, numero_etal, type_produits, date_inscription, statut
+        FROM clients_marches
+        WHERE marche_id = ?
+        ORDER BY categorie_etal, nom_complet
+    ''', (marche_id,))
+    clients = cursor.fetchall()
+    conn.close()
+    return [dict(c) for c in clients]
+
+
+def get_clients_by_categorie(marche_id: int, categorie: str):
+    """Retourne tous les clients d'une catégorie spécifique dans un marché."""
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute('''
+        SELECT id, marche_id, categorie_etal, nom_complet, numero_cni,
+               telephone, numero_etal, type_produits, date_inscription, statut
+        FROM clients_marches
+        WHERE marche_id = ? AND categorie_etal = ?
+        ORDER BY nom_complet
+    ''', (marche_id, categorie))
+    clients = cursor.fetchall()
+    conn.close()
+    return [dict(c) for c in clients]
+
+
+def get_categories_by_marche(marche_id: int):
+    """Retourne les catégories d'étals avec le nombre de clients pour un marché."""
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute('''
+        SELECT categorie_etal, COUNT(*) as nombre_clients
+        FROM clients_marches
+        WHERE marche_id = ?
+        GROUP BY categorie_etal
+        ORDER BY categorie_etal
+    ''', (marche_id,))
+    categories = cursor.fetchall()
+    conn.close()
+    return [dict(c) for c in categories]
+
+
+def get_clients_stats():
+    """Retourne les statistiques globales sur les clients des marchés."""
+    conn = get_connection()
+    cursor = conn.cursor()
+
+    cursor.execute("SELECT COUNT(*) FROM clients_marches WHERE statut = 'Actif'")
+    total_clients = cursor.fetchone()[0]
+
+    cursor.execute("SELECT COUNT(DISTINCT categorie_etal) FROM clients_marches")
+    total_categories = cursor.fetchone()[0]
+
+    cursor.execute("SELECT COUNT(DISTINCT marche_id) FROM clients_marches")
+    marches_avec_clients = cursor.fetchone()[0]
+
+    conn.close()
+    return {
+        'total_clients': total_clients,
+        'total_categories': total_categories,
+        'marches_avec_clients': marches_avec_clients
     }
 
 
